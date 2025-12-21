@@ -106,23 +106,6 @@ const TestimonialsSection = () => {
               })}
             </AnimatePresence>
 
-            {/* Center Card Glow Effect */}
-            <motion.div
-              className="absolute bottom-0 w-64 md:w-80 h-72 md:h-[340px] pointer-events-none"
-              animate={{
-                boxShadow: [
-                  "0 0 60px 20px hsl(var(--primary) / 0.1)",
-                  "0 0 80px 30px hsl(var(--primary) / 0.2)",
-                  "0 0 60px 20px hsl(var(--primary) / 0.1)",
-                ],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              style={{ zIndex: 0 }}
-            />
           </div>
 
           {/* Portal Glow Effect - Oval Shape */}
