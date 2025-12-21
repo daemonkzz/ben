@@ -83,7 +83,7 @@ const FAQSection = () => {
 
         {/* FAQ Accordion */}
         <motion.div 
-          className="max-w-3xl mx-auto space-y-3"
+          className="max-w-5xl mx-auto space-y-3"
           variants={containerVariants}
         >
           <Accordion type="single" collapsible>
@@ -93,8 +93,8 @@ const FAQSection = () => {
                   value={`item-${index}`}
                   className="border-0 mb-3"
                 >
-                  <AccordionTrigger className="flex items-center justify-between w-full text-left rounded-xl px-6 py-5 transition-all duration-300 group [&>svg]:hidden relative overflow-hidden bg-gradient-to-r from-primary/25 via-secondary/40 to-secondary/40 hover:from-primary/30 hover:via-secondary/50 hover:to-secondary/50 hover:scale-[1.01]">
-                    <span className="font-display text-sm md:text-base text-foreground tracking-wide pr-4 relative z-10 italic">
+                  <AccordionTrigger className="flex items-center justify-between w-full text-left rounded-xl px-8 py-6 transition-all duration-300 group [&>svg]:hidden relative overflow-hidden bg-gradient-to-r from-primary/25 via-secondary/40 to-secondary/40 hover:from-primary/30 hover:via-secondary/50 hover:to-secondary/50 hover:scale-[1.01]">
+                    <span className="font-display text-lg md:text-xl lg:text-2xl text-foreground tracking-wide pr-4 relative z-10 italic">
                       {item.question}
                     </span>
                     <motion.div 
