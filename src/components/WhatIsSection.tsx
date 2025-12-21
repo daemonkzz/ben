@@ -332,6 +332,41 @@ const WhatIsSection = () => {
                   </p>
                 </motion.div>
               </div>
+
+              {/* Full-width bottom card */}
+              <motion.div 
+                className="relative bg-[#222222] rounded-2xl p-5 border border-white/[0.06] cursor-pointer overflow-hidden group"
+                variants={itemVariants}
+                initial="rest"
+                whileHover="hover"
+                animate="rest"
+              >
+                {/* Hover glow */}
+                <motion.div 
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
+                  style={{
+                    background: "radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
+                  }}
+                />
+                {/* Shimmer effect on hover */}
+                <motion.div 
+                  className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100"
+                  style={{
+                    background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
+                  }}
+                  animate={{ x: ["-100%", "200%"] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 1.5 }}
+                />
+                <motion.div 
+                  className="w-7 h-7 flex items-center justify-center mb-3 relative z-10"
+                  variants={iconVariants}
+                >
+                  <Puzzle className="w-5 h-5 text-primary" />
+                </motion.div>
+                <p className="text-foreground/55 text-[11px] leading-relaxed relative z-10">
+                  The clock is ticking. Every second counts in this race against time where teamwork and quick thinking are your only allies.
+                </p>
+              </motion.div>
             </div>
           </div>
         </div>
