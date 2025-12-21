@@ -1,47 +1,181 @@
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
+
+const testimonialCards = [
+  { id: 1, image: "" },
+  { id: 2, image: "" },
+  { id: 3, image: "" },
+];
+
 const TestimonialsSection = () => {
+  const { ref: sectionRef, isVisible } = useScrollReveal({ threshold: 0.2 });
+  const [activeIndex, setActiveIndex] = useState(1);
+  const [direction, setDirection] = useState(1);
+
+  // Auto-rotate cards
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDirection(1);
+      setActiveIndex((prev) => (prev + 1) % testimonialCards.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getCardStyle = (index: number) => {
+    const positions = [
+      { x: -200, rotate: -12, scale: 0.85, zIndex: 1, opacity: 0.7 }, // Left
+      { x: 0, rotate: 0, scale: 1, zIndex: 10, opacity: 1 }, // Center
+      { x: 200, rotate: 12, scale: 0.85, zIndex: 1, opacity: 0.7 }, // Right
+    ];
+    
+    const relativeIndex = (index - activeIndex + testimonialCards.length) % testimonialCards.length;
+    return positions[relativeIndex] || positions[0];
+  };
+
   return (
     <section id="testimonials" className="py-24 md:py-32 relative overflow-hidden">
-      <div className="container mx-auto px-6">
+      <div ref={sectionRef} className="container mx-auto px-6">
         {/* Section Title */}
-        <div className="text-center mb-16">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 50 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
           <h2 className="font-display text-[50px] md:text-[70px] lg:text-[90px] text-foreground leading-[0.9] tracking-tight italic">
             THEY'LL TELL<br />YOU BETTER
           </h2>
-        </div>
+        </motion.div>
 
-        {/* Testimonial Cards - Fan Layout */}
-        <div className="relative max-w-4xl mx-auto mb-0">
+        {/* Testimonial Cards - Animated Carousel */}
+        <motion.div 
+          className="relative max-w-4xl mx-auto mb-0"
+          initial={{ opacity: 0 }}
+          animate={isVisible ? { opacity: 1 } : {}}
+          transition={{ duration: 0.8, delay: 0.3 }}
+        >
           <div className="flex justify-center items-end relative h-[320px] md:h-[380px]">
-            {/* Left Card - Tilted */}
-            <div className="absolute left-1/2 -translate-x-[170%] md:-translate-x-[150%] w-56 md:w-72 h-64 md:h-80 bg-secondary/50 rounded-[20px] border border-border/20 transform -rotate-12 origin-bottom shadow-xl" />
+            <AnimatePresence mode="sync">
+              {testimonialCards.map((card, index) => {
+                const style = getCardStyle(index);
+                return (
+                  <motion.div
+                    key={card.id}
+                    className="absolute w-56 md:w-72 h-64 md:h-80 bg-secondary/50 rounded-[20px] border border-border/20 shadow-xl cursor-pointer overflow-hidden"
+                    initial={false}
+                    animate={{
+                      x: style.x,
+                      rotate: style.rotate,
+                      scale: style.scale,
+                      zIndex: style.zIndex,
+                      opacity: style.opacity,
+                    }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30,
+                    }}
+                    whileHover={{ 
+                      scale: style.scale * 1.05,
+                      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+                    }}
+                    onClick={() => {
+                      setDirection(index > activeIndex ? 1 : -1);
+                      setActiveIndex(index);
+                    }}
+                    style={{
+                      originY: 1,
+                    }}
+                  >
+                    {/* Placeholder for testimonial image */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/50" />
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
             
-            {/* Center Card - Prominent */}
-            <div className="relative w-64 md:w-80 h-72 md:h-[340px] bg-secondary/60 rounded-[20px] border border-border/30 z-10 shadow-2xl" />
-            
-            {/* Right Card - Tilted */}
-            <div className="absolute left-1/2 translate-x-[70%] md:translate-x-[50%] w-56 md:w-72 h-64 md:h-80 bg-secondary/50 rounded-[20px] border border-border/20 transform rotate-12 origin-bottom shadow-xl" />
+            {/* Center Card Glow Effect */}
+            <motion.div 
+              className="absolute bottom-0 w-64 md:w-80 h-72 md:h-[340px] pointer-events-none"
+              animate={{
+                boxShadow: [
+                  "0 0 60px 20px hsl(var(--primary) / 0.1)",
+                  "0 0 80px 30px hsl(var(--primary) / 0.2)",
+                  "0 0 60px 20px hsl(var(--primary) / 0.1)",
+                ],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              style={{ zIndex: 0 }}
+            />
           </div>
           
           {/* Portal Glow Effect - Oval Shape */}
-          <div className="relative mx-auto -mt-8">
+          <motion.div 
+            className="relative mx-auto -mt-8"
+            animate={{
+              opacity: [0.8, 1, 0.8],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
             <div className="w-[280px] md:w-[400px] h-16 md:h-20 mx-auto bg-primary rounded-[100%] blur-sm opacity-90" />
             <div className="absolute inset-0 w-[320px] md:w-[450px] h-20 md:h-24 mx-auto bg-primary/50 rounded-[100%] blur-xl -top-2" />
             <div className="absolute inset-0 w-[360px] md:w-[500px] h-24 md:h-28 mx-auto bg-primary/30 rounded-[100%] blur-2xl -top-4" />
-          </div>
-        </div>
+          </motion.div>
 
-        {/* Update Notes Section */}
-        <div className="text-center mt-28">
-          <h3 className="font-display text-lg md:text-xl text-foreground mb-10 tracking-[0.25em] uppercase">UPDATE NOTES</h3>
-          <div className="grid grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto">
-            {[1, 2, 3].map((item) => (
-              <div 
-                key={item}
-                className="aspect-square bg-secondary/30 rounded-[20px] md:rounded-[28px] border border-border/10 hover:border-border/30 transition-all duration-300 cursor-pointer hover:bg-secondary/50"
+          {/* Navigation Dots */}
+          <div className="flex justify-center gap-2 mt-8">
+            {testimonialCards.map((_, index) => (
+              <motion.button
+                key={index}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  index === activeIndex ? "bg-primary" : "bg-foreground/20"
+                }`}
+                whileHover={{ scale: 1.3 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => {
+                  setDirection(index > activeIndex ? 1 : -1);
+                  setActiveIndex(index);
+                }}
               />
             ))}
           </div>
-        </div>
+        </motion.div>
+
+        {/* Update Notes Section */}
+        <motion.div 
+          className="text-center mt-28"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <h3 className="font-display text-lg md:text-xl text-foreground mb-10 tracking-[0.25em] uppercase">UPDATE NOTES</h3>
+          <div className="grid grid-cols-3 gap-4 md:gap-6 max-w-3xl mx-auto">
+            {[1, 2, 3].map((item, index) => (
+              <motion.div 
+                key={item}
+                className="aspect-square bg-secondary/30 rounded-[20px] md:rounded-[28px] border border-border/10 cursor-pointer"
+                initial={{ opacity: 0, y: 30 }}
+                animate={isVisible ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5, delay: 0.6 + index * 0.1 }}
+                whileHover={{ 
+                  scale: 1.05, 
+                  borderColor: "hsl(var(--primary) / 0.3)",
+                  backgroundColor: "hsl(var(--secondary) / 0.5)",
+                }}
+                whileTap={{ scale: 0.98 }}
+              />
+            ))}
+          </div>
+        </motion.div>
       </div>
     </section>
   );

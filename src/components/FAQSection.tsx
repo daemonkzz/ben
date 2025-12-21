@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import {
   Accordion,
@@ -5,6 +6,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 
 const faqItems = [
   {
@@ -38,41 +40,86 @@ const faqItems = [
 ];
 
 const FAQSection = () => {
+  const { ref: sectionRef, isVisible } = useScrollReveal({ threshold: 0.1 });
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.98 },
+    visible: { 
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.4 },
+    },
+  };
+
   return (
     <section id="faq" className="py-24 md:py-32">
-      <div className="container mx-auto px-6">
+      <motion.div 
+        ref={sectionRef}
+        className="container mx-auto px-6"
+        initial="hidden"
+        animate={isVisible ? "visible" : "hidden"}
+      >
         {/* Section Title */}
-        <div className="text-center mb-14">
+        <motion.div 
+          className="text-center mb-14"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isVisible ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+        >
           <h2 className="font-display text-[60px] md:text-[80px] text-foreground tracking-tight">FAQ</h2>
-        </div>
+        </motion.div>
 
         {/* FAQ Accordion */}
-        <div className="max-w-3xl mx-auto space-y-3">
+        <motion.div 
+          className="max-w-3xl mx-auto space-y-3"
+          variants={containerVariants}
+        >
           <Accordion type="single" collapsible>
             {faqItems.map((item, index) => (
-              <AccordionItem 
-                key={index} 
-                value={`item-${index}`}
-                className="border-0 mb-3"
-              >
-                <AccordionTrigger className="flex items-center justify-between w-full text-left rounded-xl px-6 py-5 transition-all duration-300 group [&>svg]:hidden relative overflow-hidden bg-gradient-to-r from-primary/25 via-secondary/40 to-secondary/40 hover:from-primary/30 hover:via-secondary/50 hover:to-secondary/50">
-                  <span className="font-display text-sm md:text-base text-foreground tracking-wide pr-4 relative z-10 italic">
-                    {item.question}
-                  </span>
-                  <div className="flex-shrink-0 relative z-10">
-                    <ChevronDown className="w-5 h-5 text-foreground/50 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="bg-gradient-to-r from-primary/10 via-secondary/30 to-secondary/30 rounded-b-xl px-6 pb-5 pt-0 -mt-2">
-                  <p className="text-foreground/50 text-sm leading-relaxed pt-4">
-                    {item.answer}
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
+              <motion.div key={index} variants={itemVariants}>
+                <AccordionItem 
+                  value={`item-${index}`}
+                  className="border-0 mb-3"
+                >
+                  <AccordionTrigger className="flex items-center justify-between w-full text-left rounded-xl px-6 py-5 transition-all duration-300 group [&>svg]:hidden relative overflow-hidden bg-gradient-to-r from-primary/25 via-secondary/40 to-secondary/40 hover:from-primary/30 hover:via-secondary/50 hover:to-secondary/50 hover:scale-[1.01]">
+                    <span className="font-display text-sm md:text-base text-foreground tracking-wide pr-4 relative z-10 italic">
+                      {item.question}
+                    </span>
+                    <motion.div 
+                      className="flex-shrink-0 relative z-10"
+                      whileHover={{ scale: 1.1 }}
+                    >
+                      <ChevronDown className="w-5 h-5 text-foreground/50 transition-transform duration-300 group-data-[state=open]:rotate-180" />
+                    </motion.div>
+                  </AccordionTrigger>
+                  <AccordionContent className="bg-gradient-to-r from-primary/10 via-secondary/30 to-secondary/30 rounded-b-xl px-6 pb-5 pt-0 -mt-2">
+                    <motion.p 
+                      className="text-foreground/50 text-sm leading-relaxed pt-4"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {item.answer}
+                    </motion.p>
+                  </AccordionContent>
+                </AccordionItem>
+              </motion.div>
             ))}
           </Accordion>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </section>
   );
 };
