@@ -2,10 +2,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 
+// Add your testimonial images here
 const testimonialCards = [
-  { id: 1, image: "" },
-  { id: 2, image: "" },
-  { id: 3, image: "" },
+  { id: 1, image: "/testimonial-1.jpg" },
+  { id: 2, image: "/testimonial-2.jpg" },
+  { id: 3, image: "/testimonial-3.jpg" },
 ];
 
 const TestimonialsSection = () => {
@@ -62,7 +63,7 @@ const TestimonialsSection = () => {
                 return (
                   <motion.div
                     key={card.id}
-                    className="absolute w-56 md:w-72 h-64 md:h-80 bg-secondary/50 rounded-[20px] border border-border/20 shadow-xl cursor-pointer overflow-hidden"
+                    className="absolute w-56 md:w-72 h-64 md:h-80 rounded-[20px] border border-border/20 shadow-xl cursor-pointer overflow-hidden"
                     initial={false}
                     animate={{
                       x: style.x,
@@ -88,8 +89,18 @@ const TestimonialsSection = () => {
                       originY: 1,
                     }}
                   >
-                    {/* Placeholder for testimonial image */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/50" />
+                    {/* Testimonial Image - Full cover that adapts to card shape */}
+                    {card.image ? (
+                      <img 
+                        src={card.image} 
+                        alt={`Testimonial ${card.id}`}
+                        className="absolute inset-0 w-full h-full object-cover rounded-[20px]"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-secondary/50 rounded-[20px]" />
+                    )}
+                    {/* Subtle gradient overlay for depth */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/20 rounded-[20px]" />
                   </motion.div>
                 );
               })}
