@@ -42,7 +42,7 @@ const FAQSection = () => {
     <section id="faq" className="py-24 md:py-32">
       <div className="container mx-auto px-6">
         {/* Section Title */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-14">
           <h2 className="font-display text-[60px] md:text-[80px] text-foreground tracking-tight">FAQ</h2>
         </div>
 
@@ -55,16 +55,19 @@ const FAQSection = () => {
                 value={`item-${index}`}
                 className="border-0 mb-3"
               >
-                <AccordionTrigger className="flex items-center justify-between w-full text-left bg-secondary/40 hover:bg-secondary/60 rounded-full px-6 py-4 transition-all duration-300 group data-[state=open]:rounded-t-[24px] data-[state=open]:rounded-b-none [&>svg]:hidden">
-                  <span className="font-display text-xs md:text-sm text-foreground tracking-wide pr-4">
+                <AccordionTrigger className="flex items-center justify-between w-full text-left bg-secondary/30 hover:bg-secondary/50 rounded-lg px-6 py-5 transition-all duration-300 group [&>svg]:hidden relative overflow-hidden border-l-2 border-primary/40">
+                  {/* Left gradient glow */}
+                  <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-primary/20 to-transparent pointer-events-none" />
+                  
+                  <span className="font-display text-sm md:text-base text-foreground tracking-wide pr-4 relative z-10 italic">
                     {item.question}
                   </span>
-                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/30 transition-colors">
-                    <ChevronDown className="w-3 h-3 text-primary transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  <div className="flex-shrink-0 relative z-10">
+                    <ChevronDown className="w-5 h-5 text-foreground/40 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="bg-secondary/40 rounded-b-[24px] px-6 pb-4 pt-0">
-                  <p className="text-foreground/50 text-xs md:text-sm leading-relaxed">
+                <AccordionContent className="bg-secondary/20 rounded-b-lg px-6 pb-5 pt-0 border-l-2 border-primary/20">
+                  <p className="text-foreground/50 text-sm leading-relaxed pt-4">
                     {item.answer}
                   </p>
                 </AccordionContent>
