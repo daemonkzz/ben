@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -38,27 +39,34 @@ const faqItems = [
 
 const FAQSection = () => {
   return (
-    <section id="faq" className="py-20 md:py-32">
-      <div className="container mx-auto px-4">
+    <section id="faq" className="py-24 md:py-32">
+      <div className="container mx-auto px-6">
         {/* Section Title */}
         <div className="text-center mb-16">
-          <h2 className="font-display text-5xl md:text-7xl text-foreground">FAQ</h2>
+          <h2 className="font-display text-[60px] md:text-[80px] text-foreground tracking-tight">FAQ</h2>
         </div>
 
         {/* FAQ Accordion */}
-        <div className="max-w-3xl mx-auto">
-          <Accordion type="single" collapsible className="space-y-4">
+        <div className="max-w-3xl mx-auto space-y-3">
+          <Accordion type="single" collapsible>
             {faqItems.map((item, index) => (
               <AccordionItem 
                 key={index} 
                 value={`item-${index}`}
-                className="border border-border rounded-xl px-6 bg-card/50 hover:border-primary/30 transition-colors data-[state=open]:border-primary/50"
+                className="border-0 mb-3"
               >
-                <AccordionTrigger className="text-left font-display text-lg text-foreground hover:text-primary hover:no-underline py-5">
-                  {item.question}
+                <AccordionTrigger className="flex items-center justify-between w-full text-left bg-secondary/40 hover:bg-secondary/60 rounded-full px-6 py-4 transition-all duration-300 group data-[state=open]:rounded-t-[24px] data-[state=open]:rounded-b-none [&>svg]:hidden">
+                  <span className="font-display text-xs md:text-sm text-foreground tracking-wide pr-4">
+                    {item.question}
+                  </span>
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/30 transition-colors">
+                    <ChevronDown className="w-3 h-3 text-primary transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </div>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-5">
-                  {item.answer}
+                <AccordionContent className="bg-secondary/40 rounded-b-[24px] px-6 pb-4 pt-0">
+                  <p className="text-foreground/50 text-xs md:text-sm leading-relaxed">
+                    {item.answer}
+                  </p>
                 </AccordionContent>
               </AccordionItem>
             ))}
