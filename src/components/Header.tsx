@@ -130,20 +130,31 @@ const Header = () => {
               </motion.div>
 
               {/* Right Nav Links */}
-              {["Hikaye", "Harita"].map((link, index) => (
-                <motion.a 
-                  key={link}
-                  href={`#${link.toLowerCase()}`} 
+              <motion.div
+                variants={navLinkVariants}
+                initial="initial"
+                animate="animate"
+                whileHover="hover"
+                transition={{ delay: 0.5 }}
+              >
+                <Link 
+                  to="/hikaye"
                   className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
-                  variants={navLinkVariants}
-                  initial="initial"
-                  animate="animate"
-                  whileHover="hover"
-                  transition={{ delay: 0.5 + index * 0.1 }}
                 >
-                  {link}
-                </motion.a>
-              ))}
+                  Hikaye
+                </Link>
+              </motion.div>
+              <motion.a 
+                href="#harita" 
+                className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
+                variants={navLinkVariants}
+                initial="initial"
+                animate="animate"
+                whileHover="hover"
+                transition={{ delay: 0.6 }}
+              >
+                Harita
+              </motion.a>
             </div>
           </div>
 
@@ -217,19 +228,29 @@ const Header = () => {
                   Güncellemeler
                 </Link>
               </motion.div>
-              {["Hikaye", "Harita"].map((link, index) => (
-                <motion.a 
-                  key={link}
-                  href={`#${link.toLowerCase()}`} 
-                  className="block py-3 px-4 text-foreground/70 hover:text-primary transition-colors text-sm" 
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Link 
+                  to="/hikaye"
+                  className="block py-3 px-4 text-foreground/70 hover:text-primary transition-colors text-sm"
                   onClick={() => setIsMenuOpen(false)}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: (index + 3) * 0.1 }}
                 >
-                  {link}
-                </motion.a>
-              ))}
+                  Hikaye
+                </Link>
+              </motion.div>
+              <motion.a 
+                href="#harita" 
+                className="block py-3 px-4 text-foreground/70 hover:text-primary transition-colors text-sm" 
+                onClick={() => setIsMenuOpen(false)}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                Harita
+              </motion.a>
               <div className="px-4 pt-2">
                 <Button variant="glow" size="sm" className="w-full">
                   Giriş Yap ↗
