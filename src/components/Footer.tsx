@@ -117,16 +117,24 @@ const Footer = () => {
               <AnimatedLogo size="lg" />
             </div>
             
-            {["Hikaye", "Harita"].map((link) => (
-              <motion.a 
-                key={link}
-                href={`#${link.toLowerCase()}`} 
+            <motion.div whileHover={{ y: -2 }}>
+              <Link 
+                to="/hikaye"
                 className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
-                whileHover={{ y: -2 }}
               >
-                {link}
-              </motion.a>
-            ))}
+                Hikaye
+              </Link>
+            </motion.div>
+            <motion.div whileHover={{ y: -2 }}>
+              <a 
+                href="https://whimsical.com/xportal-harita-JPbRsfz8r5hto2huL7HmBk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
+              >
+                Harita
+              </a>
+            </motion.div>
           </motion.div>
 
           {/* Right - Info */}
