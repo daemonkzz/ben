@@ -87,9 +87,17 @@ const Footer = () => {
 
           {/* Center - Navigation with Logo */}
           <motion.div 
-            className="flex items-center gap-8"
+            className="flex flex-col md:flex-row items-center gap-4 md:gap-8"
             variants={itemVariants}
           >
+            {/* Logo - visible on mobile at top */}
+            <motion.a 
+              href="/"
+              className="flex md:hidden items-center justify-center"
+              whileHover={{ scale: 1.05 }}
+            >
+              <img src={logo} alt="Logo" className="h-10 w-auto" />
+            </motion.a>
             {["Kurallar", "Güncellemeler"].map((link) => (
               <motion.a 
                 key={link}
@@ -101,10 +109,10 @@ const Footer = () => {
               </motion.a>
             ))}
             
-            {/* Center Logo */}
+            {/* Center Logo - hidden on mobile */}
             <motion.a 
               href="/"
-              className="flex items-center justify-center mx-4"
+              className="hidden md:flex items-center justify-center mx-4"
               whileHover={{ scale: 1.05 }}
             >
               <img src={logo} alt="Logo" className="h-12 w-auto" />

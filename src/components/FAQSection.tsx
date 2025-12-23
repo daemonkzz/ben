@@ -67,7 +67,7 @@ const FAQSection = () => {
   };
 
   return (
-    <section id="faq" className="py-16 md:py-24 lg:py-28 relative overflow-hidden">
+    <section id="faq" className="py-10 md:py-24 lg:py-28 relative overflow-hidden">
 
       <motion.div 
         ref={sectionRef}

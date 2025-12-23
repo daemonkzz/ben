@@ -21,7 +21,7 @@ const CTASection = () => {
   const particles = useMemo(() => generatePortalParticles(24), []);
 
   return (
-    <section className="py-16 md:py-24 lg:py-28 relative overflow-hidden">
+    <section className="py-10 md:py-24 lg:py-28 relative overflow-hidden">
       {/* Ambient background glow */}
       <motion.div
         className="absolute inset-0 pointer-events-none"

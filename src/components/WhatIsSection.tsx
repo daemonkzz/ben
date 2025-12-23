@@ -49,7 +49,7 @@ const WhatIsSection = () => {
   };
 
   return (
-    <section id="quests" className="py-16 md:py-24 lg:py-28 relative overflow-hidden bg-background">
+    <section id="quests" className="py-10 md:py-24 lg:py-28 relative overflow-hidden bg-background">
       <motion.div 
         ref={sectionRef}
         className="container mx-auto px-4 md:px-6 relative z-10"
@@ -63,7 +63,7 @@ const WhatIsSection = () => {
           <div className="flex items-start gap-4">
             {/* Title */}
             <motion.div className="flex-1" variants={itemVariants}>
-              <h2 className="font-display text-[42px] sm:text-[52px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold">
+              <h2 className="font-display text-[52px] sm:text-[62px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold">
                 <motion.span 
                   className="text-primary"
                   animate={isVisible ? {

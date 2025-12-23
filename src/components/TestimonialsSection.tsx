@@ -49,7 +49,7 @@ const TestimonialsSection = () => {
   };
 
   return (
-    <section id="testimonials" className="py-16 md:py-24 lg:py-28 relative overflow-hidden">
+    <section id="testimonials" className="py-10 md:py-24 lg:py-28 relative overflow-hidden">
       {/* Ambient background effects */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
@@ -85,7 +85,7 @@ const TestimonialsSection = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <motion.h2 
-            className="font-display text-[50px] md:text-[70px] lg:text-[90px] text-foreground leading-[0.9] tracking-tight italic"
+            className="font-display text-[60px] md:text-[70px] lg:text-[90px] text-foreground leading-[0.9] tracking-tight italic"
             animate={isVisible ? {
               textShadow: [
                 "0 0 0px transparent",
