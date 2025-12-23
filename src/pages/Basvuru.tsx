@@ -11,6 +11,7 @@ type ApplicationStatus = "open" | "closed" | "approved" | "pending" | "draft";
 interface ApplicationCardProps {
   title: string;
   status: ApplicationStatus;
+  formId?: string;
   featured?: boolean;
   delay?: number;
 }
@@ -34,18 +35,20 @@ const generateFloatingParticles = (count: number) => {
   }));
 };
 
-const ApplicationCard = ({ title, status, featured, delay = 0 }: ApplicationCardProps) => {
+const ApplicationCard = ({ title, status, formId, featured, delay = 0 }: ApplicationCardProps) => {
   const getStatusContent = () => {
     switch (status) {
       case "open":
         return (
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            className="w-full py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-md font-medium transition-all duration-300 border border-primary/20 hover:border-primary/40 text-sm tracking-wide"
-          >
-            Başvuru Yap
-          </motion.button>
+          <Link to={`/basvuru/${formId}`}>
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              className="w-full py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-md font-medium transition-all duration-300 border border-primary/20 hover:border-primary/40 text-sm tracking-wide text-center"
+            >
+              Başvuru Yap
+            </motion.div>
+          </Link>
         );
       case "closed":
         return (
@@ -193,11 +196,11 @@ const Basvuru = () => {
 
   const roleApplications: ApplicationCardProps[] = [
     { title: "Birlik Başvurusu", status: "closed" },
-    { title: "LSPD Akademi Başvurusu", status: "open", featured: true },
+    { title: "LSPD Akademi Başvurusu", status: "open", formId: "lspd-akademi", featured: true },
     { title: "Alt Karakter Başvurusu", status: "closed" },
-    { title: "Şirket Başvurusu", status: "open", featured: true },
-    { title: "Taksici Başvurusu", status: "open", featured: true },
-    { title: "LSFMD Hastane Birimi Başvurusu", status: "open", featured: true },
+    { title: "Şirket Başvurusu", status: "open", formId: "sirket", featured: true },
+    { title: "Taksici Başvurusu", status: "open", formId: "taksici", featured: true },
+    { title: "LSFMD Hastane Birimi Başvurusu", status: "open", formId: "hastane", featured: true },
   ];
 
   const applicationHistory: HistoryItemProps[] = [
