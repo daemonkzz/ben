@@ -144,17 +144,20 @@ const Header = () => {
                   Hikaye
                 </Link>
               </motion.div>
-              <motion.a 
-                href="#harita" 
-                className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
+              <motion.div
                 variants={navLinkVariants}
                 initial="initial"
                 animate="animate"
                 whileHover="hover"
                 transition={{ delay: 0.6 }}
               >
-                Harita
-              </motion.a>
+                <a 
+                  href="#harita" 
+                  className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
+                >
+                  Harita
+                </a>
+              </motion.div>
             </div>
           </div>
 
