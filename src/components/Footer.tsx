@@ -92,7 +92,7 @@ const Footer = () => {
               className="flex items-center justify-center mx-4"
               whileHover={{ scale: 1.05 }}
             >
-              <img src={logo} alt="Logo" className="h-8 w-auto" />
+              <img src={logo} alt="Logo" className="h-12 w-auto" />
             </motion.a>
             
             {["Testimonials", "FAQ"].map((link) => (

@@ -102,7 +102,7 @@ const Header = () => {
                   animate={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.1) 0%, transparent 70%)" }}
                   transition={{ duration: 1.5, ease: "easeOut" }}
                 />
-                <img src={logo} alt="Logo" className="h-10 w-auto" />
+                <img src={logo} alt="Logo" className="h-14 w-auto" />
               </motion.a>
 
               {/* Right Nav Links */}
