@@ -190,7 +190,7 @@ const Header = () => {
               ))}
               <div className="px-4 pt-2">
                 <Button variant="glow" size="sm" className="w-full">
-                  Book now ↗
+                  Giriş Yap ↗
                 </Button>
               </div>
             </motion.nav>

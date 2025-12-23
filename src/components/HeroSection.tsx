@@ -107,12 +107,13 @@ const HeroSection = () => {
       <motion.div className="container mx-auto px-6 relative z-10" style={{
       opacity
     }}>
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 pb-16">
+        {/* Desktop Layout */}
+        <div className="hidden lg:flex flex-row items-end justify-between gap-8 pb-16">
           {/* Left Content */}
           <motion.div className="max-w-xl" style={{
           y: textY
         }}>
-            <motion.h1 className="font-display text-[100px] md:text-[140px] lg:text-[180px] text-foreground leading-[0.85] tracking-tight mb-8 italic perspective-1000">
+            <motion.h1 className="font-display text-[180px] text-foreground leading-[0.85] tracking-tight mb-8 italic perspective-1000">
               <div className="overflow-visible">
                 {"ESCAPE".split("").map((letter, i) => <motion.span key={`escape-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible" whileHover={{
                 scale: 1.1,
@@ -222,6 +223,67 @@ const HeroSection = () => {
                       transition={{ duration: 1, delay: 1.5, ease: "easeOut" }}
                     />
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="lg:hidden pb-8">
+          {/* Title */}
+          <motion.div style={{ y: textY }}>
+            <motion.h1 className="font-display text-[70px] sm:text-[90px] md:text-[120px] text-foreground leading-[0.85] tracking-tight mb-6 italic perspective-1000">
+              <div className="overflow-visible">
+                {"ESCAPE".split("").map((letter, i) => <motion.span key={`escape-${i}`} className="inline-block" custom={i} variants={letterVariants} initial="hidden" animate="visible">
+                    {letter}
+                  </motion.span>)}
+              </div>
+              <div className="overflow-visible">
+                {"ROOM".split("").map((letter, i) => <motion.span key={`room-${i}`} className="inline-block" custom={i + 6} variants={letterVariants} initial="hidden" animate="visible">
+                    {letter}
+                  </motion.span>)}
+              </div>
+            </motion.h1>
+          </motion.div>
+          
+          {/* Button and Server Status inline */}
+          <motion.div 
+            className="flex items-center gap-3"
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.8, delay: 1.5 }}
+          >
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button variant="glow" size="default" className="text-sm px-6 font-medium">
+                Başvur <span className="ml-1.5">↗</span>
+              </Button>
+            </motion.div>
+
+            {/* Compact Server Status Card */}
+            <motion.div 
+              className="bg-card/80 backdrop-blur-sm border border-border/30 rounded-xl p-2.5 relative overflow-hidden"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 1.4 }}
+            >
+              <div className="relative z-10 flex items-center gap-2">
+                <img src={logo} alt="Logo" className="w-7 h-7 object-contain" />
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <motion.div 
+                      className="w-2 h-2 rounded-full bg-primary"
+                      animate={{
+                        boxShadow: ["0 0 0px hsl(var(--primary) / 0)", "0 0 8px hsl(var(--primary) / 0.8)", "0 0 0px hsl(var(--primary) / 0)"]
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity
+                      }}
+                    />
+                    <span className="text-foreground text-[10px] font-medium">Aktif</span>
+                  </div>
+                  <span className="text-primary text-[9px] font-medium">75/300</span>
                 </div>
               </div>
             </motion.div>

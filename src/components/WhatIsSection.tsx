@@ -63,7 +63,7 @@ const WhatIsSection = () => {
           <div className="flex items-start gap-4">
             {/* Title */}
             <motion.div className="flex-1" variants={itemVariants}>
-              <h2 className="font-display text-[32px] sm:text-[42px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold">
+              <h2 className="font-display text-[42px] sm:text-[52px] text-foreground leading-[0.9] tracking-tight italic uppercase font-bold">
                 WHAT<br />
                 IS <motion.span 
                   className="text-primary"
