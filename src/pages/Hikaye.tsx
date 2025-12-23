@@ -231,11 +231,11 @@ const Hikaye = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
-                className="flex gap-8"
+                className="flex justify-center"
               >
-                {/* İçindekiler */}
-                <aside className="hidden lg:block w-56 shrink-0">
-                  <div className="sticky top-32">
+                {/* İçindekiler - Sticky Sol Taraf */}
+                <aside className="hidden lg:block w-48 shrink-0">
+                  <div className="sticky top-32 pr-6">
                     <h3 className="text-xs text-primary tracking-[0.2em] uppercase mb-4">
                       İÇİNDEKİLER
                     </h3>
@@ -260,17 +260,17 @@ const Hikaye = () => {
                   </div>
                 </aside>
 
-                {/* Story Content */}
+                {/* Story Content - Glass Effect */}
                 <div
                   ref={contentRef}
-                  className="flex-1 max-w-2xl mx-auto max-h-[65vh] overflow-y-auto pr-4"
+                  className="w-full max-w-4xl max-h-[65vh] overflow-y-auto"
                 >
-                  <div className="card-gradient border border-border rounded-sm p-8 md:p-12">
+                  <div className="bg-background/40 backdrop-blur-md border border-border/50 rounded-sm p-10 md:p-14 shadow-xl">
                     {storyContent.map((section, index) => (
                       <motion.section
                         key={section.id}
                         data-section={section.id}
-                        className={`mb-12 ${index !== 0 ? "pt-10 border-t border-border" : ""}`}
+                        className={`mb-12 ${index !== 0 ? "pt-10 border-t border-border/30" : ""}`}
                         initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}
