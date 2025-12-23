@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Kurallar from "./pages/Kurallar";
 import Guncellemeler from "./pages/Guncellemeler";
+import GuncellemeDetay from "./pages/GuncellemeDetay";
 import NotFound from "./pages/NotFound";
 import AmbientParticles from "./components/AmbientParticles";
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/kurallar" element={<Kurallar />} />
           <Route path="/guncellemeler" element={<Guncellemeler />} />
+          <Route path="/guncellemeler/:id" element={<GuncellemeDetay />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

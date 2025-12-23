@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
@@ -190,99 +191,101 @@ const Guncellemeler = () => {
         >
           <AnimatePresence mode="popLayout">
             {paginatedUpdates.map((item, index) => (
-              <motion.div
+              <Link
                 key={item.id}
-                layout
-                initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="group relative bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/[0.06] cursor-pointer flex flex-col"
-                whileHover={{ y: -8, scale: 1.02 }}
+                to={`/guncellemeler/${item.id}`}
+                className="block"
               >
-                {/* Hover glow effect */}
-                <motion.div 
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10"
-                  style={{
-                    background: "radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
-                  }}
-                />
-                
-                {/* Image */}
-                <div className="relative aspect-[4/3] overflow-hidden">
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-secondary/50 to-secondary/20" />
-                  )}
-                  
-                  {/* Shimmer effect on hover */}
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.4, delay: index * 0.08 }}
+                  className="group relative bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/[0.06] cursor-pointer flex flex-col h-full"
+                  whileHover={{ y: -8, scale: 1.02 }}
+                >
+                  {/* Hover glow effect */}
                   <motion.div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10"
                     style={{
-                      background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
+                      background: "radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
                     }}
-                    animate={{ x: ["-100%", "200%"] }}
-                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
                   />
                   
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
-                  
-                  {/* Version badge - top left (placeholder space if no version) */}
-                  <div className="absolute top-4 left-4 h-7">
-                    {item.version && (
-                      <motion.div 
-                        className="bg-primary/90 text-background text-xs font-bold px-3 py-1.5 rounded-full"
-                        whileHover={{ scale: 1.1 }}
-                      >
-                        {item.version}
-                      </motion.div>
+                  {/* Image */}
+                  <div className="relative aspect-[4/3] overflow-hidden">
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-secondary/50 to-secondary/20" />
                     )}
-                  </div>
-
-                  {/* Category badge - top right */}
-                  <div className="absolute top-4 right-4 text-[10px] uppercase tracking-wider px-2.5 py-1 bg-background/80 backdrop-blur-sm text-primary border border-primary/30">
-                    {item.category === "update" ? "Güncelleme" : "Haber"}
-                  </div>
-                </div>
-
-                {/* Content - flex-grow to push footer to bottom */}
-                <div className="p-5 lg:p-6 flex flex-col flex-grow">
-                  {/* Title - Fixed height area */}
-                  <div className="flex-grow min-h-[72px]">
-                    <h3 className="font-display text-xl lg:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 italic leading-tight line-clamp-2">
-                      {item.title}
-                    </h3>
-                  </div>
-
-                  {/* Footer - Always at bottom */}
-                  <div className="flex items-center justify-between pt-4 border-t border-white/[0.06] mt-auto">
-                    <motion.button
-                      className="text-primary text-sm font-medium flex items-center gap-2"
-                      whileHover={{ x: 4 }}
-                    >
-                      Devamını Oku
-                      <motion.svg 
-                        className="w-4 h-4" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                        animate={{ x: [0, 3, 0] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </motion.svg>
-                    </motion.button>
                     
-                    <span className="text-sm text-foreground/40">{item.date}</span>
+                    {/* Shimmer effect on hover */}
+                    <motion.div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                      style={{
+                        background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
+                      }}
+                      animate={{ x: ["-100%", "200%"] }}
+                      transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                    />
+                    
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
+                    
+                    {/* Version badge - top left (placeholder space if no version) */}
+                    <div className="absolute top-4 left-4 h-7">
+                      {item.version && (
+                        <motion.div 
+                          className="bg-primary/90 text-background text-xs font-bold px-3 py-1.5 rounded-full"
+                          whileHover={{ scale: 1.1 }}
+                        >
+                          {item.version}
+                        </motion.div>
+                      )}
+                    </div>
+
+                    {/* Category badge - top right */}
+                    <div className="absolute top-4 right-4 text-[10px] uppercase tracking-wider px-2.5 py-1 bg-background/80 backdrop-blur-sm text-primary border border-primary/30">
+                      {item.category === "update" ? "Güncelleme" : "Haber"}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+
+                  {/* Content - flex-grow to push footer to bottom */}
+                  <div className="p-5 lg:p-6 flex flex-col flex-grow">
+                    {/* Title - Fixed height area */}
+                    <div className="flex-grow min-h-[72px]">
+                      <h3 className="font-display text-xl lg:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 italic leading-tight line-clamp-2">
+                        {item.title}
+                      </h3>
+                    </div>
+
+                    {/* Footer - Always at bottom */}
+                    <div className="flex items-center justify-between pt-4 border-t border-white/[0.06] mt-auto">
+                      <span className="text-primary text-sm font-medium flex items-center gap-2">
+                        Devamını Oku
+                        <motion.svg 
+                          className="w-4 h-4" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                          animate={{ x: [0, 3, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </motion.svg>
+                      </span>
+                      
+                      <span className="text-sm text-foreground/40">{item.date}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              </Link>
             ))}
           </AnimatePresence>
         </motion.div>
