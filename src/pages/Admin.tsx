@@ -50,7 +50,7 @@ import {
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 import type { UpdateData } from '@/types/update';
 
-type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kullanicilar';
+type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kurallar' | 'kullanicilar';
 type ApplicationFilterType = 'all' | 'whitelist' | 'other';
 type FormFilterType = 'all' | 'whitelist' | 'other';
 type UpdateFilterType = 'all' | 'update' | 'news';
@@ -462,6 +462,7 @@ const Admin = () => {
     { id: 'basvurular' as TabType, label: 'Başvurular', icon: FileText },
     { id: 'formlar' as TabType, label: 'Form Şablonları', icon: Settings },
     { id: 'guncellemeler' as TabType, label: 'Güncellemeler', icon: Bell },
+    { id: 'kurallar' as TabType, label: 'Kurallar', icon: Shield },
     { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users },
   ];
 
@@ -925,6 +926,28 @@ const Admin = () => {
                 </Table>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'kurallar' && (
+          <div>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Kurallar</h2>
+                <p className="text-muted-foreground">Sunucu kurallarını yönet</p>
+              </div>
+              <Button onClick={() => navigate('/admin/rules-editor')} className="gap-2">
+                <Pencil className="w-4 h-4" />
+                Kuralları Düzenle
+              </Button>
+            </div>
+            <div className="text-center py-12 bg-card rounded-lg border border-border">
+              <Shield className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">Kuralları düzenlemek için editöre gidin</p>
+              <Button onClick={() => navigate('/admin/rules-editor')} variant="outline">
+                Editöre Git
+              </Button>
+            </div>
           </div>
         )}
 
