@@ -425,9 +425,10 @@ const Hikaye = () => {
               onTouchEnd={handleTouchEnd}
             >
               <div
-                className="absolute inset-0 flex items-center justify-center transition-transform duration-75"
+                className="absolute inset-0 flex items-center justify-center will-change-transform"
                 style={{
-                  transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                  transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
+                  transition: isDragging ? 'none' : 'transform 100ms ease-out',
                 }}
               >
                 {isMapLoading ? (
@@ -740,9 +741,10 @@ const Hikaye = () => {
                 >
                   {/* Map image with pan/zoom */}
                   <div
-                    className="absolute inset-0 flex items-center justify-center transition-transform duration-75"
+                    className="absolute inset-0 flex items-center justify-center will-change-transform"
                     style={{
-                      transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+                      transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
+                      transition: isDragging ? 'none' : 'transform 100ms ease-out',
                     }}
                   >
                     {isMapLoading ? (
