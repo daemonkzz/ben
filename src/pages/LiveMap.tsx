@@ -1,20 +1,30 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Tldraw, Editor, loadSnapshot } from 'tldraw';
-import 'tldraw/tldraw.css';
+import { useState, useEffect, useRef } from 'react';
+import { Excalidraw } from '@excalidraw/excalidraw';
+import type { ExcalidrawImperativeAPI, AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
+interface SceneData {
+  elements: any[];
+  appState: Partial<AppState>;
+  files: BinaryFiles;
+}
+
 export default function LiveMap() {
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [whiteboardId, setWhiteboardId] = useState<string | null>(null);
-  const [initialSnapshot, setInitialSnapshot] = useState<any>(null);
+  const [initialData, setInitialData] = useState<SceneData | null>(null);
   
-  const hasHydratedRef = useRef(false);
-  const editorRef = useRef<Editor | null>(null);
+  const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null);
+
+  // Keep ref in sync
+  useEffect(() => {
+    excalidrawAPIRef.current = excalidrawAPI;
+  }, [excalidrawAPI]);
 
   // Load initial whiteboard data
   useEffect(() => {
@@ -33,8 +43,9 @@ export default function LiveMap() {
 
         if (data) {
           setWhiteboardId(data.id);
-          if (data.scene_data && Object.keys(data.scene_data).length > 0) {
-            setInitialSnapshot(data.scene_data);
+          const sceneData = data.scene_data as SceneData | null;
+          if (sceneData && sceneData.elements && sceneData.elements.length > 0) {
+            setInitialData(sceneData);
           }
         }
       } catch (err) {
@@ -47,30 +58,9 @@ export default function LiveMap() {
     loadWhiteboard();
   }, []);
 
-  // Load snapshot ONCE when editor and initialSnapshot are ready
+  // Subscribe to realtime updates
   useEffect(() => {
-    if (!editor || hasHydratedRef.current) return;
-
-    if (initialSnapshot) {
-      try {
-        console.log('[LiveMap] Loading initial snapshot...');
-        loadSnapshot(editor.store, initialSnapshot);
-        hasHydratedRef.current = true;
-        // Zoom to fit content after loading
-        setTimeout(() => {
-          editor.zoomToFit();
-        }, 100);
-      } catch (e) {
-        console.error('[LiveMap] Could not load initial snapshot:', e);
-      }
-    } else {
-      hasHydratedRef.current = true;
-    }
-  }, [editor, initialSnapshot]);
-
-  // Subscribe to realtime updates SEPARATELY
-  useEffect(() => {
-    if (!whiteboardId || !editor) return;
+    if (!whiteboardId || !excalidrawAPI) return;
 
     console.log('[LiveMap] Setting up realtime subscription...');
 
@@ -86,9 +76,18 @@ export default function LiveMap() {
         },
         (payload) => {
           console.log('[LiveMap] Realtime update received');
-          if (payload.new && (payload.new as any).scene_data) {
+          const newSceneData = (payload.new as any).scene_data as SceneData;
+          if (newSceneData && newSceneData.elements) {
             try {
-              loadSnapshot(editor.store, (payload.new as any).scene_data);
+              // Update scene with new data
+              excalidrawAPI.updateScene({
+                elements: newSceneData.elements,
+              });
+              
+              // Update files if present
+              if (newSceneData.files && Object.keys(newSceneData.files).length > 0) {
+                excalidrawAPI.addFiles(Object.values(newSceneData.files));
+              }
             } catch (e) {
               console.error('[LiveMap] Error loading realtime update:', e);
             }
@@ -101,17 +100,7 @@ export default function LiveMap() {
       console.log('[LiveMap] Cleaning up realtime subscription');
       supabase.removeChannel(channel);
     };
-  }, [whiteboardId, editor]);
-
-  // STABLE onMount - no dependencies
-  const handleEditorMount = useCallback((editorInstance: Editor) => {
-    console.log('[LiveMap] Editor mounted');
-    setEditor(editorInstance);
-    editorRef.current = editorInstance;
-    
-    // Make it readonly immediately
-    editorInstance.updateInstanceState({ isReadonly: true });
-  }, []);
+  }, [whiteboardId, excalidrawAPI]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -143,20 +132,34 @@ export default function LiveMap() {
               <p className="text-muted-foreground">Harita yükleniyor...</p>
             </div>
           </div>
-        ) : import.meta.env.PROD && !import.meta.env.VITE_TLDRAW_LICENSE_KEY ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-background">
-            <div className="text-center p-8 max-w-md">
-              <h2 className="text-xl font-bold text-destructive mb-4">Harita Geçici Olarak Kullanılamıyor</h2>
-              <p className="text-muted-foreground">
-                Lütfen daha sonra tekrar deneyin veya site yöneticisiyle iletişime geçin.
-              </p>
-            </div>
-          </div>
         ) : (
-          <Tldraw
-            onMount={handleEditorMount}
-            hideUi
-            licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
+          <Excalidraw
+            excalidrawAPI={(api) => setExcalidrawAPI(api)}
+            initialData={initialData ? {
+              elements: initialData.elements,
+              appState: {
+                ...initialData.appState,
+                viewModeEnabled: true,
+              },
+              files: initialData.files,
+            } : {
+              appState: {
+                viewModeEnabled: true,
+              }
+            }}
+            viewModeEnabled={true}
+            zenModeEnabled={true}
+            theme="dark"
+            langCode="tr-TR"
+            UIOptions={{
+              canvasActions: {
+                export: false,
+                saveAsImage: false,
+                loadScene: false,
+                clearCanvas: false,
+                toggleTheme: false,
+              },
+            }}
           />
         )}
       </div>

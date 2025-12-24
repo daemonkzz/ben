@@ -1,13 +1,12 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Tldraw, Editor, TLAssetStore, AssetRecordType, getSnapshot, loadSnapshot } from 'tldraw';
-import 'tldraw/tldraw.css';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Excalidraw, convertToExcalidrawElements } from '@excalidraw/excalidraw';
+import type { ExcalidrawImperativeAPI, AppState, BinaryFiles, DataURL } from '@excalidraw/excalidraw/types';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Image as ImageIcon, Save, Loader2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { GalleryPickerModal } from '@/components/admin/updates/GalleryPickerModal';
-import imageCompression from 'browser-image-compression';
 import { throttle } from 'lodash';
 import {
   AlertDialog,
@@ -21,45 +20,34 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+interface SceneData {
+  elements: any[];
+  appState: Partial<AppState>;
+  files: BinaryFiles;
+}
+
 export default function WhiteboardEditor() {
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [whiteboardId, setWhiteboardId] = useState<string | null>(null);
-  const [initialSnapshot, setInitialSnapshot] = useState<any>(null);
+  const [initialData, setInitialData] = useState<SceneData | null>(null);
   
   // Refs for stability
-  const isHydratingRef = useRef(false);
-  const hasHydratedRef = useRef(false);
+  const isHydratingRef = useRef(true);
   const saveInFlightRef = useRef(false);
-  const editorRef = useRef<Editor | null>(null);
+  const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const whiteboardIdRef = useRef<string | null>(null);
 
-  // Keep ref in sync with state
+  // Keep refs in sync with state
   useEffect(() => {
     whiteboardIdRef.current = whiteboardId;
   }, [whiteboardId]);
 
-  // Window-level error catching for debugging
   useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      console.error('[WhiteboardEditor] Uncaught error:', event.error);
-      toast.error('Bir hata oluştu. Konsolu kontrol edin.');
-    };
-
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('[WhiteboardEditor] Unhandled rejection:', event.reason);
-    };
-
-    window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-
-    return () => {
-      window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-    };
-  }, []);
+    excalidrawAPIRef.current = excalidrawAPI;
+  }, [excalidrawAPI]);
 
   // Load initial whiteboard data
   useEffect(() => {
@@ -81,94 +69,34 @@ export default function WhiteboardEditor() {
         if (data) {
           console.log('[WhiteboardEditor] Whiteboard loaded:', data.id);
           setWhiteboardId(data.id);
-          if (data.scene_data && Object.keys(data.scene_data).length > 0) {
-            setInitialSnapshot(data.scene_data);
+          
+          const sceneData = data.scene_data as SceneData | null;
+          if (sceneData && sceneData.elements && sceneData.elements.length > 0) {
+            setInitialData(sceneData);
           }
         }
       } catch (err) {
         console.error('[WhiteboardEditor] Load error:', err);
       } finally {
         setIsLoading(false);
+        // Allow saves after a short delay
+        setTimeout(() => {
+          isHydratingRef.current = false;
+          console.log('[WhiteboardEditor] Hydration complete, autosave enabled');
+        }, 1000);
       }
     };
 
     loadWhiteboard();
   }, []);
 
-  // Custom asset store for uploading images to Supabase Storage
-  const assetStore = useMemo<TLAssetStore>(() => ({
-    async upload(asset, file) {
-      try {
-        console.log('[WhiteboardEditor] Uploading asset:', file.name);
-        
-        // Compress image
-        const compressedFile = await imageCompression(file, {
-          maxSizeMB: 2,
-          maxWidthOrHeight: 2048,
-          useWebWorker: true,
-          fileType: 'image/webp',
-        });
-
-        // Generate unique filename
-        const fileExt = 'webp';
-        const fileName = `whiteboard_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `whiteboard/${fileName}`;
-
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('gallery')
-          .upload(filePath, compressedFile, {
-            contentType: 'image/webp',
-            upsert: false,
-          });
-
-        if (uploadError) {
-          console.error('[WhiteboardEditor] Upload error:', uploadError);
-          toast.error('Resim yüklenirken hata oluştu');
-          throw uploadError;
-        }
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('gallery')
-          .getPublicUrl(filePath);
-
-        // Also save to gallery_images table
-        const { data: userData } = await supabase.auth.getUser();
-        const { error: insertError } = await supabase.from('gallery_images').insert({
-          file_name: fileName,
-          file_path: filePath,
-          url: urlData.publicUrl,
-          original_size: file.size,
-          optimized_size: compressedFile.size,
-          mime_type: 'image/webp',
-          uploaded_by: userData.user?.id,
-        });
-
-        if (insertError) {
-          console.error('[WhiteboardEditor] Gallery insert error:', insertError);
-        }
-
-        console.log('[WhiteboardEditor] Asset uploaded:', urlData.publicUrl);
-        toast.success('Resim yüklendi');
-        return { src: urlData.publicUrl };
-      } catch (error) {
-        console.error('[WhiteboardEditor] Asset upload error:', error);
-        throw error;
-      }
-    },
-    resolve(asset) {
-      return asset.props.src;
-    },
-  }), []);
-
   // Save function using refs to avoid dependency changes
   const saveWhiteboard = useCallback(async () => {
-    const currentEditor = editorRef.current;
+    const api = excalidrawAPIRef.current;
     const currentWhiteboardId = whiteboardIdRef.current;
 
-    if (!currentEditor || !currentWhiteboardId) {
-      console.log('[WhiteboardEditor] Save skipped: no editor or whiteboardId');
+    if (!api || !currentWhiteboardId) {
+      console.log('[WhiteboardEditor] Save skipped: no API or whiteboardId');
       return;
     }
 
@@ -188,13 +116,27 @@ export default function WhiteboardEditor() {
     setIsSaving(true);
     
     try {
-      const snapshot = getSnapshot(currentEditor.store);
-      console.log('[WhiteboardEditor] Saving snapshot...');
+      const elements = api.getSceneElements();
+      const appState = api.getAppState();
+      const files = api.getFiles();
+
+      const sceneData: SceneData = {
+        elements: elements as any[],
+        appState: {
+          viewBackgroundColor: appState.viewBackgroundColor,
+          zoom: appState.zoom,
+          scrollX: appState.scrollX,
+          scrollY: appState.scrollY,
+        },
+        files,
+      };
+
+      console.log('[WhiteboardEditor] Saving scene data...');
       
       const { error } = await supabase
         .from('whiteboards')
         .update({
-          scene_data: snapshot,
+          scene_data: sceneData,
           updated_at: new Date().toISOString(),
         })
         .eq('id', currentWhiteboardId);
@@ -203,7 +145,7 @@ export default function WhiteboardEditor() {
         console.error('[WhiteboardEditor] Save error:', error);
         toast.error('Kaydetme hatası');
       } else {
-        console.log('[WhiteboardEditor] Snapshot saved successfully');
+        console.log('[WhiteboardEditor] Scene data saved successfully');
       }
     } catch (err) {
       console.error('[WhiteboardEditor] Save error:', err);
@@ -213,107 +155,91 @@ export default function WhiteboardEditor() {
     }
   }, []);
 
-  // Load snapshot ONCE when editor and initialSnapshot are ready
-  useEffect(() => {
-    if (!editor || hasHydratedRef.current) return;
-
-    // If there's an initial snapshot, load it
-    if (initialSnapshot) {
-      try {
-        console.log('[WhiteboardEditor] Loading initial snapshot...');
-        isHydratingRef.current = true;
-        loadSnapshot(editor.store, initialSnapshot);
-        console.log('[WhiteboardEditor] Initial snapshot loaded');
-      } catch (e) {
-        console.error('[WhiteboardEditor] Could not load initial snapshot:', e);
-        toast.error('Snapshot yüklenemedi, temiz sayfa açılıyor');
-      } finally {
-        // Delay turning off hydrating to ensure store settles
-        setTimeout(() => {
-          isHydratingRef.current = false;
-          hasHydratedRef.current = true;
-          console.log('[WhiteboardEditor] Hydration complete, autosave enabled');
-        }, 500);
-      }
-    } else {
-      // No snapshot, mark as hydrated
-      hasHydratedRef.current = true;
-      console.log('[WhiteboardEditor] No initial snapshot, starting fresh');
-    }
-  }, [editor, initialSnapshot]);
-
-  // Set up autosave listener SEPARATELY from onMount
-  useEffect(() => {
-    if (!editor || !whiteboardId) return;
-
-    console.log('[WhiteboardEditor] Setting up autosave listener...');
-
-    const throttledSave = throttle(() => {
+  // Throttled save for onChange
+  const throttledSave = useCallback(
+    throttle(() => {
       if (!isHydratingRef.current) {
         saveWhiteboard();
       }
-    }, 3000);
+    }, 3000),
+    [saveWhiteboard]
+  );
 
-    const cleanup = editor.store.listen(() => {
-      throttledSave();
-    }, { scope: 'document' });
+  // Handle scene changes
+  const handleChange = useCallback((
+    elements: readonly any[],
+    appState: AppState,
+    files: BinaryFiles
+  ) => {
+    throttledSave();
+  }, [throttledSave]);
 
-    return () => {
-      console.log('[WhiteboardEditor] Autosave listener cleanup');
-      cleanup();
-      throttledSave.cancel();
-    };
-  }, [editor, whiteboardId, saveWhiteboard]);
+  // Helper function to convert URL to data URL
+  const urlToDataURL = async (url: string): Promise<DataURL> => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as DataURL);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
 
-  // Handle gallery image selection - proper tldraw v4 asset creation
-  const handleGallerySelect = useCallback((urls: string[]) => {
-    if (!editor) return;
+  // Handle gallery image selection
+  const handleGallerySelect = useCallback(async (urls: string[]) => {
+    if (!excalidrawAPI) return;
 
     console.log('[WhiteboardEditor] Adding gallery images:', urls.length);
+    setGalleryOpen(false);
 
-    urls.forEach((url, index) => {
-      try {
-        // Create asset first (tldraw v4 requirement)
-        const assetId = AssetRecordType.createId();
+    try {
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i];
         
-        editor.createAssets([{
-          id: assetId,
-          type: 'image',
-          typeName: 'asset',
-          props: {
-            name: `Gallery Image ${index + 1}`,
-            src: url,
-            w: 400,
-            h: 300,
-            mimeType: 'image/webp',
-            isAnimated: false,
-          },
-          meta: {},
+        // Convert URL to data URL for Excalidraw
+        const dataURL = await urlToDataURL(url);
+        
+        // Generate unique file ID
+        const fileId = `gallery_${Date.now()}_${i}`;
+        
+        // Add file to Excalidraw
+        excalidrawAPI.addFiles([{
+          id: fileId as any,
+          dataURL,
+          mimeType: 'image/webp',
+          created: Date.now(),
         }]);
 
-        // Create image shape with assetId
-        const viewportCenter = editor.getViewportScreenCenter();
-        editor.createShape({
+        // Create image element using convertToExcalidrawElements
+        const viewportCenter = {
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        };
+
+        const imageElements = convertToExcalidrawElements([{
           type: 'image',
-          x: viewportCenter.x - 200 + (index * 50),
-          y: viewportCenter.y - 150 + (index * 50),
-          props: {
-            assetId,
-            w: 400,
-            h: 300,
-          },
+          fileId: fileId as any,
+          x: viewportCenter.x - 200 + (i * 50),
+          y: viewportCenter.y - 150 + (i * 50),
+          width: 400,
+          height: 300,
+        }]);
+
+        // Update scene with new element
+        excalidrawAPI.updateScene({
+          elements: [...excalidrawAPI.getSceneElements(), ...imageElements],
         });
 
-        console.log('[WhiteboardEditor] Image added with assetId:', assetId);
-      } catch (err) {
-        console.error('[WhiteboardEditor] Error adding image:', err);
-        toast.error('Resim eklenirken hata oluştu');
+        console.log('[WhiteboardEditor] Image added:', fileId);
       }
-    });
 
-    setGalleryOpen(false);
-    toast.success(`${urls.length} resim eklendi`);
-  }, [editor]);
+      toast.success(`${urls.length} resim eklendi`);
+    } catch (err) {
+      console.error('[WhiteboardEditor] Error adding images:', err);
+      toast.error('Resim eklenirken hata oluştu');
+    }
+  }, [excalidrawAPI]);
 
   // Manual save button
   const handleManualSave = async () => {
@@ -323,7 +249,7 @@ export default function WhiteboardEditor() {
 
   // Reset whiteboard
   const handleReset = async () => {
-    if (!whiteboardId || !editor) return;
+    if (!whiteboardId || !excalidrawAPI) return;
 
     try {
       console.log('[WhiteboardEditor] Resetting whiteboard...');
@@ -332,7 +258,7 @@ export default function WhiteboardEditor() {
       const { error } = await supabase
         .from('whiteboards')
         .update({
-          scene_data: {},
+          scene_data: { elements: [], appState: {}, files: {} },
           updated_at: new Date().toISOString(),
         })
         .eq('id', whiteboardId);
@@ -343,17 +269,8 @@ export default function WhiteboardEditor() {
         return;
       }
 
-      // Reset editor - delete all shapes
-      const allShapeIds = editor.getCurrentPageShapeIds();
-      if (allShapeIds.size > 0) {
-        editor.deleteShapes([...allShapeIds]);
-      }
-
-      // Delete all assets
-      const allAssets = editor.getAssets();
-      if (allAssets.length > 0) {
-        editor.deleteAssets(allAssets.map(a => a.id));
-      }
+      // Reset Excalidraw
+      excalidrawAPI.resetScene();
 
       toast.success('Harita sıfırlandı');
       console.log('[WhiteboardEditor] Whiteboard reset complete');
@@ -362,13 +279,6 @@ export default function WhiteboardEditor() {
       toast.error('Sıfırlama sırasında hata');
     }
   };
-
-  // STABLE onMount - no dependencies, just sets the editor ref
-  const handleEditorMount = useCallback((editorInstance: Editor) => {
-    console.log('[WhiteboardEditor] Editor mounted');
-    setEditor(editorInstance);
-    editorRef.current = editorInstance;
-  }, []);
 
   return (
     <AdminLayout activeTab="canliharita">
@@ -436,30 +346,23 @@ export default function WhiteboardEditor() {
           </div>
         </div>
 
-        {/* Tldraw Editor */}
+        {/* Excalidraw Editor */}
         <div className="flex-1 relative">
           {isLoading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-background">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          ) : import.meta.env.PROD && !import.meta.env.VITE_TLDRAW_LICENSE_KEY ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-background">
-              <div className="text-center p-8 max-w-md">
-                <h2 className="text-xl font-bold text-destructive mb-4">Tldraw Lisansı Gerekli</h2>
-                <p className="text-muted-foreground mb-4">
-                  Production ortamında tldraw kullanmak için lisans anahtarı gereklidir. 
-                  Lütfen Lovable proje ayarlarından <code className="bg-muted px-1 rounded">VITE_TLDRAW_LICENSE_KEY</code> environment variable'ını ekleyin.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Lisans için: <a href="https://tldraw.dev" target="_blank" rel="noopener noreferrer" className="text-primary underline">tldraw.dev</a>
-                </p>
-              </div>
-            </div>
           ) : (
-            <Tldraw
-              onMount={handleEditorMount}
-              assets={assetStore}
-              licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
+            <Excalidraw
+              excalidrawAPI={(api) => setExcalidrawAPI(api)}
+              initialData={initialData ? {
+                elements: initialData.elements,
+                appState: initialData.appState,
+                files: initialData.files,
+              } : undefined}
+              onChange={handleChange}
+              theme="dark"
+              langCode="tr-TR"
             />
           )}
         </div>
