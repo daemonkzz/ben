@@ -11,7 +11,12 @@ import {
   X, 
   Loader2,
   Shield,
-  Plus
+  Plus,
+  Settings,
+  Pencil,
+  Trash2,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +28,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import type { FormQuestion, FormSettings } from '@/types/formBuilder';
 
-type TabType = 'basvurular' | 'duyurular' | 'kullanicilar';
+type TabType = 'basvurular' | 'formlar' | 'duyurular' | 'kullanicilar';
 
 interface Application {
   id: number;
@@ -35,6 +51,17 @@ interface Application {
   created_at: string;
 }
 
+interface FormTemplate {
+  id: string;
+  title: string;
+  description: string | null;
+  is_active: boolean;
+  questions: FormQuestion[];
+  settings: FormSettings;
+  created_at: string;
+  updated_at: string;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
@@ -42,8 +69,11 @@ const Admin = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('basvurular');
   const [applications, setApplications] = useState<Application[]>([]);
+  const [formTemplates, setFormTemplates] = useState<FormTemplate[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [deletingFormId, setDeletingFormId] = useState<string | null>(null);
+  const [togglingFormId, setTogglingFormId] = useState<string | null>(null);
 
   // Check if user has admin role
   useEffect(() => {
@@ -57,7 +87,6 @@ const Admin = () => {
       }
 
       try {
-        // Check if user has admin role using the has_role function via RPC
         const { data: hasAdminRole, error: roleError } = await supabase
           .rpc('has_role', { _user_id: user.id, _role: 'admin' });
 
@@ -87,10 +116,14 @@ const Admin = () => {
     checkAdminRole();
   }, [user, authLoading, navigate]);
 
-  // Fetch applications when authorized and on basvurular tab
+  // Fetch data based on active tab
   useEffect(() => {
-    if (isAuthorized && activeTab === 'basvurular') {
-      fetchApplications();
+    if (isAuthorized) {
+      if (activeTab === 'basvurular') {
+        fetchApplications();
+      } else if (activeTab === 'formlar') {
+        fetchFormTemplates();
+      }
     }
   }, [isAuthorized, activeTab]);
 
@@ -112,6 +145,34 @@ const Admin = () => {
     } catch (error) {
       console.error('Fetch error:', error);
       toast.error('Başvurular yüklenirken hata oluştu');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  const fetchFormTemplates = async () => {
+    setIsLoadingData(true);
+    try {
+      const { data, error } = await supabase
+        .from('form_templates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Fetch form templates error:', error);
+        toast.error('Form şablonları yüklenirken hata oluştu');
+        return;
+      }
+
+      const typedTemplates = (data || []).map(t => ({
+        ...t,
+        questions: t.questions as FormQuestion[],
+        settings: t.settings as FormSettings
+      }));
+      setFormTemplates(typedTemplates);
+    } catch (error) {
+      console.error('Fetch error:', error);
+      toast.error('Form şablonları yüklenirken hata oluştu');
     } finally {
       setIsLoadingData(false);
     }
@@ -141,6 +202,53 @@ const Admin = () => {
     }
   };
 
+  const toggleFormStatus = async (formId: string, currentStatus: boolean) => {
+    setTogglingFormId(formId);
+    try {
+      const { error } = await supabase
+        .from('form_templates')
+        .update({ is_active: !currentStatus })
+        .eq('id', formId);
+
+      if (error) {
+        console.error('Toggle error:', error);
+        toast.error('Form durumu güncellenirken hata oluştu');
+        return;
+      }
+
+      toast.success(currentStatus ? 'Form pasif yapıldı' : 'Form aktif yapıldı');
+      fetchFormTemplates();
+    } catch (error) {
+      console.error('Toggle error:', error);
+      toast.error('Form durumu güncellenirken hata oluştu');
+    } finally {
+      setTogglingFormId(null);
+    }
+  };
+
+  const deleteFormTemplate = async (formId: string) => {
+    try {
+      const { error } = await supabase
+        .from('form_templates')
+        .delete()
+        .eq('id', formId);
+
+      if (error) {
+        console.error('Delete error:', error);
+        toast.error('Form silinirken hata oluştu');
+        return;
+      }
+
+      toast.success('Form silindi');
+      fetchFormTemplates();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Form silinirken hata oluştu');
+    } finally {
+      setDeletingFormId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
@@ -154,7 +262,19 @@ const Admin = () => {
   };
 
   const getCharacterName = (content: Record<string, string>) => {
-    return content?.karakter_adi || content?.character_name || content?.isim || 'Belirtilmemiş';
+    // Look for common character name fields
+    const nameKeys = Object.keys(content).filter(key => 
+      key.toLowerCase().includes('karakter') || 
+      key.toLowerCase().includes('character') ||
+      key.toLowerCase().includes('isim') ||
+      key.toLowerCase().includes('ad')
+    );
+    if (nameKeys.length > 0) {
+      return content[nameKeys[0]] || 'Belirtilmemiş';
+    }
+    // Return first value as fallback
+    const values = Object.values(content);
+    return values[0] || 'Belirtilmemiş';
   };
 
   const formatDate = (dateString: string) => {
@@ -168,13 +288,10 @@ const Admin = () => {
   };
 
   const getFormTypeName = (type: string) => {
-    const typeMap: Record<string, string> = {
-      'lspd-akademi': 'LSPD Akademi',
-      'sirket': 'Şirket',
-      'taksici': 'Taksici',
-      'hastane': 'Hastane',
-    };
-    return typeMap[type] || type;
+    // Try to find from templates
+    const template = formTemplates.find(t => t.id === type);
+    if (template) return template.title;
+    return type;
   };
 
   // Show loading while checking auth
@@ -196,6 +313,7 @@ const Admin = () => {
 
   const sidebarItems = [
     { id: 'basvurular' as TabType, label: 'Başvurular', icon: FileText },
+    { id: 'formlar' as TabType, label: 'Form Şablonları', icon: Settings },
     { id: 'duyurular' as TabType, label: 'Duyurular', icon: Bell },
     { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users },
   ];
@@ -247,6 +365,7 @@ const Admin = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-8">
+        {/* Başvurular Tab */}
         {activeTab === 'basvurular' && (
           <div>
             <div className="mb-6 flex items-center justify-between">
@@ -254,10 +373,6 @@ const Admin = () => {
                 <h2 className="text-2xl font-bold text-foreground">Başvurular</h2>
                 <p className="text-muted-foreground">Tüm başvuruları görüntüle ve yönet</p>
               </div>
-              <Button onClick={() => navigate('/admin/form-builder')} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Yeni Form Oluştur
-              </Button>
             </div>
 
             {isLoadingData ? (
@@ -274,8 +389,8 @@ const Admin = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-border hover:bg-transparent">
-                      <TableHead className="text-muted-foreground">Karakter Adı</TableHead>
-                      <TableHead className="text-muted-foreground">Başvuru Tipi</TableHead>
+                      <TableHead className="text-muted-foreground">Başvuran</TableHead>
+                      <TableHead className="text-muted-foreground">Form</TableHead>
                       <TableHead className="text-muted-foreground">Tarih</TableHead>
                       <TableHead className="text-muted-foreground">Durum</TableHead>
                       <TableHead className="text-muted-foreground text-right">İşlemler</TableHead>
@@ -301,7 +416,7 @@ const Admin = () => {
                           {getStatusBadge(app.status)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button
                               size="sm"
                               variant="outline"
@@ -341,6 +456,111 @@ const Admin = () => {
           </div>
         )}
 
+        {/* Form Şablonları Tab */}
+        {activeTab === 'formlar' && (
+          <div>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Form Şablonları</h2>
+                <p className="text-muted-foreground">Başvuru formlarını oluştur ve yönet</p>
+              </div>
+              <Button onClick={() => navigate('/admin/form-builder')} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Yeni Form Oluştur
+              </Button>
+            </div>
+
+            {isLoadingData ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : formTemplates.length === 0 ? (
+              <div className="text-center py-12 bg-card rounded-lg border border-border">
+                <Settings className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">Henüz form şablonu bulunmuyor</p>
+                <Button onClick={() => navigate('/admin/form-builder')} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  İlk Formu Oluştur
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-card rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-muted-foreground">Form Adı</TableHead>
+                      <TableHead className="text-muted-foreground">Soru Sayısı</TableHead>
+                      <TableHead className="text-muted-foreground">Durum</TableHead>
+                      <TableHead className="text-muted-foreground">Oluşturulma</TableHead>
+                      <TableHead className="text-muted-foreground text-right">İşlemler</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {formTemplates.map((template) => (
+                      <TableRow key={template.id} className="border-border">
+                        <TableCell className="font-medium text-foreground">
+                          {template.title}
+                        </TableCell>
+                        <TableCell className="text-foreground">
+                          {template.questions?.length || 0} soru
+                        </TableCell>
+                        <TableCell>
+                          {template.is_active ? (
+                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                              Aktif
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-muted text-muted-foreground border-border">
+                              Pasif
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(template.created_at)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => toggleFormStatus(template.id, template.is_active)}
+                              disabled={togglingFormId === template.id}
+                              title={template.is_active ? 'Pasif Yap' : 'Aktif Yap'}
+                            >
+                              {togglingFormId === template.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : template.is_active ? (
+                                <ToggleRight className="w-4 h-4 text-emerald-400" />
+                              ) : (
+                                <ToggleLeft className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => navigate(`/admin/form-builder/${template.id}`)}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeletingFormId(template.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'duyurular' && (
           <div>
             <div className="mb-6">
@@ -367,6 +587,27 @@ const Admin = () => {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingFormId} onOpenChange={() => setDeletingFormId(null)}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">Formu Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bu formu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-border">İptal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deletingFormId && deleteFormTemplate(deletingFormId)}
+            >
+              Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

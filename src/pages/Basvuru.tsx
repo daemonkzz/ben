@@ -1,29 +1,41 @@
 import { useMemo, useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Lock, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, CheckCircle, Clock, XCircle, FileText } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import type { FormQuestion, FormSettings } from "@/types/formBuilder";
 
 // Application card types
-type ApplicationStatus = "open" | "closed" | "approved" | "pending" | "draft" | "rejected" | "locked";
+type ApplicationStatus = "open" | "closed" | "approved" | "pending" | "rejected" | "locked";
+
+interface FormTemplate {
+  id: string;
+  title: string;
+  description: string | null;
+  cover_image_url: string | null;
+  is_active: boolean;
+  questions: FormQuestion[];
+  settings: FormSettings;
+  created_at: string;
+}
 
 interface ApplicationCardProps {
   title: string;
+  description?: string | null;
   status: ApplicationStatus;
   formId?: string;
   featured?: boolean;
   delay?: number;
-  applicationId?: number;
+  coverImage?: string | null;
 }
 
 interface HistoryItemProps {
   id: number;
   title: string;
-  status: "approved" | "pending" | "draft" | "rejected";
+  status: "approved" | "pending" | "rejected";
   type: string;
   delay?: number;
 }
@@ -47,7 +59,7 @@ const generateFloatingParticles = (count: number) => {
   }));
 };
 
-const ApplicationCard = ({ title, status, formId, featured, delay = 0, applicationId }: ApplicationCardProps) => {
+const ApplicationCard = ({ title, description, status, formId, featured, delay = 0, coverImage }: ApplicationCardProps) => {
   const getStatusContent = () => {
     switch (status) {
       case "open":
@@ -96,16 +108,6 @@ const ApplicationCard = ({ title, status, formId, featured, delay = 0, applicati
             Başvurunuz reddedildi
           </div>
         );
-      case "draft":
-        return (
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/15 text-amber-400 rounded-md font-medium transition-all duration-300 border border-amber-500/20 text-sm"
-          >
-            Devam Et
-          </motion.button>
-        );
       default:
         return null;
     }
@@ -117,13 +119,24 @@ const ApplicationCard = ({ title, status, formId, featured, delay = 0, applicati
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay, ease: "easeOut" }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className={`relative p-5 rounded-lg border transition-all duration-300 group ${
+      className={`relative rounded-lg border transition-all duration-300 group overflow-hidden ${
         featured 
           ? "bg-card/60 border-primary/20 hover:border-primary/40" 
           : "bg-card/30 border-border/20 hover:border-border/40"
       } ${status === "locked" ? "opacity-60" : ""}`}
     >
-      <div className="space-y-4">
+      {/* Cover Image */}
+      {coverImage && (
+        <div className="w-full h-32 overflow-hidden">
+          <img 
+            src={coverImage} 
+            alt={title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+      )}
+      
+      <div className="p-5 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="font-display text-lg text-foreground group-hover:text-primary transition-colors duration-300 tracking-wide">
@@ -151,6 +164,11 @@ const ApplicationCard = ({ title, status, formId, featured, delay = 0, applicati
           )}
         </div>
 
+        {/* Description */}
+        {description && (
+          <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
+        )}
+
         {/* Subtle divider */}
         <div className="h-px bg-border/20" />
 
@@ -165,7 +183,6 @@ const HistoryItem = ({ id, title, status, type, delay = 0 }: HistoryItemProps) =
   const statusConfig = {
     approved: { color: "text-primary", label: "Onaylandı", icon: CheckCircle },
     pending: { color: "text-amber-500", label: "Beklemede", icon: Clock },
-    draft: { color: "text-muted-foreground", label: "Taslak", icon: Clock },
     rejected: { color: "text-destructive", label: "Reddedildi", icon: XCircle },
   };
   const config = statusConfig[status];
@@ -197,14 +214,6 @@ const HistoryItem = ({ id, title, status, type, delay = 0 }: HistoryItemProps) =
   );
 };
 
-const formTypeNames: Record<string, string> = {
-  'whitelist': 'Whitelist Başvurusu',
-  'lspd-akademi': 'LSPD Akademi Başvurusu',
-  'sirket': 'Şirket Başvurusu',
-  'taksici': 'Taksici Başvurusu',
-  'hastane': 'LSFMD Hastane Başvurusu',
-};
-
 const Basvuru = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -212,16 +221,36 @@ const Basvuru = () => {
   
   const [isWhitelistApproved, setIsWhitelistApproved] = useState(false);
   const [userApplications, setUserApplications] = useState<UserApplication[]>([]);
+  const [formTemplates, setFormTemplates] = useState<FormTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
+    const fetchData = async () => {
       try {
+        // Fetch active form templates
+        const { data: templates, error: templatesError } = await supabase
+          .from('form_templates')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+
+        if (templatesError) {
+          console.error('Templates fetch error:', templatesError);
+        } else {
+          // Type assertion for JSON fields
+          const typedTemplates = (templates || []).map(t => ({
+            ...t,
+            questions: t.questions as FormQuestion[],
+            settings: t.settings as FormSettings
+          }));
+          setFormTemplates(typedTemplates);
+        }
+
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
+
         // Fetch profile to check whitelist status
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
@@ -255,34 +284,34 @@ const Basvuru = () => {
     };
 
     if (!authLoading) {
-      fetchUserData();
+      fetchData();
     }
   }, [user, authLoading]);
 
-  // Get application status for a specific form type
-  const getApplicationStatus = (formType: string): ApplicationStatus => {
-    const app = userApplications.find(a => a.type === formType);
+  // Get application status for a specific form
+  const getApplicationStatus = (formId: string, template: FormTemplate): ApplicationStatus => {
+    // Check if user has existing application
+    const app = userApplications.find(a => a.type === formId);
     if (app) {
       return app.status as ApplicationStatus;
     }
+
+    // Check role restrictions
+    const roleRestrictions = template.settings?.roleRestrictions || [];
+    
+    // If form requires 'user' role (approved members only)
+    if (roleRestrictions.includes('user') && !isWhitelistApproved) {
+      return "locked";
+    }
+
+    // Check max applications limit
+    const maxApps = template.settings?.maxApplications || 0;
+    if (maxApps > 0) {
+      // TODO: Check total application count for this form
+    }
+
     return "open";
   };
-
-  // Get application ID for a specific form type
-  const getApplicationId = (formType: string): number | undefined => {
-    const app = userApplications.find(a => a.type === formType);
-    return app?.id;
-  };
-
-  // Check if user has pending whitelist application
-  const hasPendingWhitelist = userApplications.some(
-    a => a.type === 'whitelist' && a.status === 'pending'
-  );
-
-  // Check if user has rejected whitelist application (can reapply)
-  const hasRejectedWhitelist = userApplications.some(
-    a => a.type === 'whitelist' && a.status === 'rejected'
-  );
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -304,62 +333,18 @@ const Basvuru = () => {
     },
   };
 
-  // Whitelist application card status
-  const getWhitelistStatus = (): ApplicationStatus => {
-    if (isWhitelistApproved) return "approved";
-    if (hasPendingWhitelist) return "pending";
-    if (hasRejectedWhitelist) return "open"; // Can reapply after rejection
-    return "open";
-  };
-
-  // Role applications - locked if not whitelist approved
-  const roleApplications: ApplicationCardProps[] = [
-    { 
-      title: "Birlik Başvurusu", 
-      status: isWhitelistApproved ? "closed" : "locked" 
-    },
-    { 
-      title: "LSPD Akademi Başvurusu", 
-      status: isWhitelistApproved ? getApplicationStatus('lspd-akademi') : "locked",
-      formId: "lspd-akademi", 
-      featured: isWhitelistApproved,
-      applicationId: getApplicationId('lspd-akademi')
-    },
-    { 
-      title: "Alt Karakter Başvurusu", 
-      status: isWhitelistApproved ? "closed" : "locked" 
-    },
-    { 
-      title: "Şirket Başvurusu", 
-      status: isWhitelistApproved ? getApplicationStatus('sirket') : "locked",
-      formId: "sirket", 
-      featured: isWhitelistApproved,
-      applicationId: getApplicationId('sirket')
-    },
-    { 
-      title: "Taksici Başvurusu", 
-      status: isWhitelistApproved ? getApplicationStatus('taksici') : "locked",
-      formId: "taksici", 
-      featured: isWhitelistApproved,
-      applicationId: getApplicationId('taksici')
-    },
-    { 
-      title: "LSFMD Hastane Birimi Başvurusu", 
-      status: isWhitelistApproved ? getApplicationStatus('hastane') : "locked",
-      formId: "hastane", 
-      featured: isWhitelistApproved,
-      applicationId: getApplicationId('hastane')
-    },
-  ];
-
   // Application history from database
-  const applicationHistory: HistoryItemProps[] = userApplications.map((app, index) => ({
-    id: app.id,
-    title: formTypeNames[app.type] || app.type,
-    status: app.status as "approved" | "pending" | "draft" | "rejected",
-    type: app.type,
-    delay: 0.5 + index * 0.1
-  }));
+  const applicationHistory: HistoryItemProps[] = userApplications.map((app, index) => {
+    // Find form title from templates
+    const template = formTemplates.find(t => t.id === app.type);
+    return {
+      id: app.id,
+      title: template?.title || app.type,
+      status: app.status as "approved" | "pending" | "rejected",
+      type: app.type,
+      delay: 0.5 + index * 0.1
+    };
+  });
 
   // Show loading state
   if (authLoading || isLoading) {
@@ -495,175 +480,113 @@ const Basvuru = () => {
               >
                 BAŞVURU
               </motion.span>
-              {" "}
-              <span className="text-foreground/40">MERKEZİ</span>
+              <br />
+              <span className="text-foreground/90">MERKEZİ</span>
             </h1>
-            
-            <motion.div 
-              className="w-40 h-[2px] bg-gradient-to-r from-transparent via-primary to-transparent mx-auto mt-8 mb-6"
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            />
-            
-            <p className="text-muted-foreground max-w-lg mx-auto text-sm leading-relaxed">
-              {isWhitelistApproved 
-                ? "Sunucuya katılım ve rol yetkileri için gerekli tüm başvurularını buradan yönetebilirsin."
-                : "Sunucuya katılmak için önce Whitelist başvurusu yapmalısın. Onaylandıktan sonra diğer başvuruları yapabilirsin."
-              }
-            </p>
-
-            {/* User Status Badge */}
-            <div className="mt-6 flex justify-center">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm ${
-                isWhitelistApproved 
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-              }`}>
-                {isWhitelistApproved ? (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Onaylı Üye
-                  </>
-                ) : (
-                  <>
-                    <Clock className="w-4 h-4" />
-                    Onaysız Üye
-                  </>
-                )}
-              </div>
-            </div>
           </motion.div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_380px] gap-8 lg:gap-12">
-            {/* Left Column - Applications */}
-            <div className="space-y-14">
-              {/* Whitelist Application Section - Only for non-approved users */}
+          {/* Main Grid */}
+          <div className="grid lg:grid-cols-[1fr_320px] gap-10">
+            {/* Left Column - Application Cards */}
+            <motion.div variants={itemVariants} className="space-y-8">
+              {/* Status Banner for non-whitelisted users */}
               {!isWhitelistApproved && (
-                <motion.section variants={itemVariants} className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                    <h2 className="font-display text-base tracking-[0.25em] text-primary/90 flex items-center gap-3">
-                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                      WHITELIST BAŞVURUSU
-                    </h2>
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-5 rounded-lg border border-amber-500/20 bg-amber-500/5"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg bg-amber-500/10">
+                      <Lock className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-foreground mb-1">Whitelist Onayı Gerekli</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Diğer başvuruları yapabilmek için önce whitelist başvurunuzun onaylanması gerekmektedir.
+                      </p>
+                    </div>
                   </div>
+                </motion.div>
+              )}
 
-                  <div className="max-w-lg">
-                    <ApplicationCard 
-                      title="Whitelist Başvurusu" 
-                      status={getWhitelistStatus()}
-                      formId="whitelist"
+              {/* Forms from Database */}
+              {formTemplates.length === 0 ? (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-16 border border-dashed border-border/30 rounded-lg"
+                >
+                  <FileText className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">Henüz aktif başvuru formu bulunmuyor</p>
+                </motion.div>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {formTemplates.map((template, index) => (
+                    <ApplicationCard
+                      key={template.id}
+                      title={template.title}
+                      description={template.description}
+                      status={getApplicationStatus(template.id, template)}
+                      formId={template.id}
                       featured={true}
-                      delay={0.1}
+                      delay={0.1 + index * 0.1}
+                      coverImage={template.cover_image_url}
                     />
-                  </div>
-
-                  {hasPendingWhitelist && (
-                    <p className="text-sm text-muted-foreground">
-                      Whitelist başvurunuz inceleniyor. Onaylandığında diğer başvuruları yapabilirsiniz.
-                    </p>
-                  )}
-                </motion.section>
-              )}
-
-              {/* Approved Whitelist Status */}
-              {isWhitelistApproved && (
-                <motion.section variants={itemVariants} className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                    <h2 className="font-display text-base tracking-[0.25em] text-primary/90 flex items-center gap-3">
-                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                      TEMEL BAŞVURULAR
-                    </h2>
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                  </div>
-
-                  <div className="max-w-lg">
-                    <ApplicationCard 
-                      title="Whitelist Başvurusu" 
-                      status="approved"
-                      delay={0.1}
-                    />
-                  </div>
-                </motion.section>
-              )}
-
-              {/* Role Applications Section */}
-              <motion.section variants={itemVariants} className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                  <h2 className="font-display text-base tracking-[0.25em] text-primary/90 flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    ROL BAŞVURULARI
-                  </h2>
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {roleApplications.map((app, index) => (
-                    <ApplicationCard key={index} {...app} delay={0.15 + index * 0.08} />
                   ))}
                 </div>
-              </motion.section>
-            </div>
+              )}
+            </motion.div>
 
-            {/* Right Column - Sidebar */}
-            <motion.aside
-              variants={itemVariants}
-              className="lg:sticky lg:top-32 self-start"
-            >
-              <div className="relative p-6 rounded-2xl bg-card/20 backdrop-blur-sm border border-border/20 overflow-hidden">
-                {/* Background glow */}
-                <div className="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-                
-                <div className="relative z-10 space-y-5">
-                  {/* Section title */}
-                  <div className="pb-4 border-b border-border/20">
-                    <h2 className="font-display text-sm tracking-[0.2em] text-primary/80">
-                      GEÇMİŞ BAŞVURULARIN
-                    </h2>
+            {/* Right Column - Application History */}
+            <motion.div variants={itemVariants}>
+              <div className="sticky top-32">
+                <div className="p-6 rounded-lg bg-card/20 border border-border/15">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-display text-lg text-foreground tracking-wide">
+                      Başvuru Geçmişi
+                    </h3>
+                    <span className="text-[10px] text-muted-foreground tracking-widest uppercase">
+                      Son {Math.min(applicationHistory.length, 5)}
+                    </span>
                   </div>
 
-                  {/* History items */}
-                  <div className="space-y-3">
-                    {applicationHistory.length > 0 ? (
-                      applicationHistory.map((item) => (
+                  {applicationHistory.length === 0 ? (
+                    <p className="text-sm text-muted-foreground/60 text-center py-8">
+                      Henüz başvuru yok
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {applicationHistory.slice(0, 5).map((item) => (
                         <HistoryItem key={item.id} {...item} />
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Henüz başvuru yapmadınız
-                      </p>
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  )}
 
-                  {/* Footer decoration */}
-                  <div className="pt-5 mt-5 border-t border-border/10">
-                    <motion.div 
-                      className="flex items-center gap-2.5 text-muted-foreground/40 text-xs"
-                      animate={{ opacity: [0.4, 0.7, 0.4] }}
-                      transition={{ duration: 3, repeat: Infinity }}
-                    >
-                      <div className="w-2 h-2 rounded-full bg-primary/40" />
-                      <span className="tracking-wide">Aktif başvuru sistemi</span>
-                    </motion.div>
+                  {/* User Stats */}
+                  <div className="mt-8 pt-6 border-t border-border/15">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 rounded-lg bg-card/30">
+                        <span className="text-2xl font-display text-primary">
+                          {applicationHistory.filter(a => a.status === "approved").length}
+                        </span>
+                        <p className="text-[10px] text-muted-foreground mt-1 tracking-wide uppercase">
+                          Onaylanan
+                        </p>
+                      </div>
+                      <div className="text-center p-3 rounded-lg bg-card/30">
+                        <span className="text-2xl font-display text-amber-500">
+                          {applicationHistory.filter(a => a.status === "pending").length}
+                        </span>
+                        <p className="text-[10px] text-muted-foreground mt-1 tracking-wide uppercase">
+                          Bekleyen
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                {/* Corner decorations */}
-                <div className="absolute top-0 left-0 w-8 h-8">
-                  <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-primary/40 to-transparent" />
-                  <div className="absolute top-0 left-0 h-full w-[1px] bg-gradient-to-b from-primary/40 to-transparent" />
-                </div>
-                <div className="absolute bottom-0 right-0 w-8 h-8">
-                  <div className="absolute bottom-0 right-0 w-full h-[1px] bg-gradient-to-l from-primary/40 to-transparent" />
-                  <div className="absolute bottom-0 right-0 h-full w-[1px] bg-gradient-to-t from-primary/40 to-transparent" />
                 </div>
               </div>
-            </motion.aside>
+            </motion.div>
           </div>
         </motion.div>
       </main>

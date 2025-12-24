@@ -1,208 +1,29 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, ChevronRight, ChevronLeft, Send, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Loader2, AlertCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { useApplicationForm, FormStep } from "@/hooks/useApplicationForm";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import type { FormQuestion, FormSettings } from "@/types/formBuilder";
 
-// Form configurations for different application types
-const formConfigs: Record<string, { title: string; steps: FormStep[] }> = {
-  "whitelist": {
-    title: "Whitelist Başvurusu",
-    steps: [
-      {
-        id: "personal",
-        title: "Kişisel Bilgiler",
-        description: "Kendiniz hakkında bilgi verin",
-        fields: [
-          { id: "discordName", type: "text", label: "Discord Kullanıcı Adınız", placeholder: "Örn: username#1234", required: true },
-          { id: "age", type: "text", label: "Gerçek Yaşınız", placeholder: "Örn: 18", required: true },
-          { id: "howDidYouFind", type: "select", label: "Sunucuyu Nasıl Buldunuz?", options: ["Discord", "YouTube", "Arkadaş Tavsiyesi", "Sosyal Medya", "Diğer"], required: true },
-        ],
-      },
-      {
-        id: "experience",
-        title: "Roleplay Deneyimi",
-        description: "RP deneyiminiz hakkında bilgi verin",
-        fields: [
-          { id: "rpExperience", type: "textarea", label: "Daha Önce RP Deneyiminiz Var mı?", placeholder: "Hangi sunucularda, ne kadar süre oynadınız?", required: true },
-          { id: "whatIsRp", type: "textarea", label: "Roleplay Nedir? Kısaca Açıklayın", placeholder: "RP kavramını nasıl anlıyorsunuz?", required: true },
-          { id: "rules", type: "textarea", label: "Temel RP Kurallarını Biliyor musunuz?", placeholder: "RDM, VDM, Metagaming gibi kavramları açıklayın...", required: true },
-        ],
-      },
-      {
-        id: "character",
-        title: "Karakter Bilgileri",
-        description: "Oluşturmak istediğiniz karakter",
-        fields: [
-          { id: "characterName", type: "text", label: "Karakter Adı Soyadı", placeholder: "Örn: John Doe", required: true },
-          { id: "characterAge", type: "text", label: "Karakter Yaşı", placeholder: "Örn: 25", required: true },
-          { id: "characterBackstory", type: "textarea", label: "Karakter Hikayesi", placeholder: "Karakterinizin geçmişini, kişiliğini ve hedeflerini anlatın...", required: true },
-        ],
-      },
-      {
-        id: "scenario",
-        title: "Senaryo Sorusu",
-        description: "Aşağıdaki senaryoya nasıl tepki verirsiniz?",
-        fields: [
-          { id: "scenario1", type: "textarea", label: "Senaryo: Karakteriniz şehre yeni gelmiş ve bir iş arıyor. Bir kafede oturuyorken yanınıza biri yaklaşıp size iş teklif ediyor. Ne yaparsınız?", placeholder: "Karakteriniz olarak nasıl tepki verirsiniz? Detaylı anlatın...", required: true },
-          { id: "scenario2", type: "textarea", label: "Senaryo: Arabanızla giderken bir kaza yapıyorsunuz ve karşı araçtaki kişi size bağırmaya başlıyor. Ne yaparsınız?", placeholder: "Karakteriniz olarak nasıl tepki verirsiniz?", required: true },
-        ],
-      },
-    ],
-  },
-  "lspd-akademi": {
-    title: "LSPD Akademi Başvurusu",
-    steps: [
-      {
-        id: "personal",
-        title: "Kişisel Bilgiler",
-        description: "Karakter bilgilerinizi girin",
-        fields: [
-          { id: "characterName", type: "text", label: "Karakter Adı Soyadı", placeholder: "Örn: John Doe", required: true },
-          { id: "age", type: "text", label: "Karakter Yaşı", placeholder: "Örn: 25", required: true },
-          { id: "phone", type: "text", label: "Telefon Numarası", placeholder: "Örn: 555-1234", required: true },
-        ],
-      },
-      {
-        id: "background",
-        title: "Geçmiş Bilgileri",
-        description: "Karakterinizin geçmişi hakkında bilgi verin",
-        fields: [
-          { id: "previousJob", type: "text", label: "Önceki Mesleğiniz", placeholder: "Varsa belirtin", required: false },
-          { id: "criminalRecord", type: "radio", label: "Sabıka Kaydınız Var mı?", options: ["Evet", "Hayır"], required: true },
-          { id: "backstory", type: "textarea", label: "Karakter Hikayeniz", placeholder: "Karakterinizin geçmişini kısaca anlatın...", required: true },
-        ],
-      },
-      {
-        id: "motivation",
-        title: "Motivasyon",
-        description: "LSPD'ye katılma nedenleriniz",
-        fields: [
-          { id: "whyJoin", type: "textarea", label: "Neden LSPD'ye Katılmak İstiyorsunuz?", placeholder: "Motivasyonunuzu açıklayın...", required: true },
-          { id: "experience", type: "textarea", label: "Roleplay Deneyiminiz", placeholder: "Daha önce RP sunucularında deneyiminiz var mı?", required: true },
-          { id: "availability", type: "select", label: "Haftalık Aktiflik Süreniz", options: ["1-5 saat", "5-10 saat", "10-20 saat", "20+ saat"], required: true },
-        ],
-      },
-      {
-        id: "scenario",
-        title: "Senaryo Soruları",
-        description: "Aşağıdaki senaryolara nasıl tepki verirsiniz?",
-        fields: [
-          { id: "scenario1", type: "textarea", label: "Senaryo 1: Bir trafik kontrolü sırasında sürücü kaçmaya çalışıyor. Ne yaparsınız?", placeholder: "Cevabınızı yazın...", required: true },
-          { id: "scenario2", type: "textarea", label: "Senaryo 2: Bir banka soygunu ihbarı alıyorsunuz. Nasıl müdahale edersiniz?", placeholder: "Cevabınızı yazın...", required: true },
-        ],
-      },
-    ],
-  },
-  "sirket": {
-    title: "Şirket Başvurusu",
-    steps: [
-      {
-        id: "company",
-        title: "Şirket Bilgileri",
-        description: "Kurmak istediğiniz şirket hakkında bilgi verin",
-        fields: [
-          { id: "companyName", type: "text", label: "Şirket Adı", placeholder: "Örn: Los Santos Lojistik", required: true },
-          { id: "companyType", type: "select", label: "Şirket Türü", options: ["Lojistik", "Emlak", "Oto Galeri", "Restaurant", "Diğer"], required: true },
-          { id: "location", type: "text", label: "Şirket Lokasyonu", placeholder: "Örn: Vinewood Blvd.", required: true },
-        ],
-      },
-      {
-        id: "owner",
-        title: "Sahip Bilgileri",
-        description: "Şirket sahibi olarak bilgileriniz",
-        fields: [
-          { id: "ownerName", type: "text", label: "Karakter Adı Soyadı", placeholder: "Örn: John Doe", required: true },
-          { id: "ownerPhone", type: "text", label: "Telefon Numarası", placeholder: "Örn: 555-1234", required: true },
-          { id: "capital", type: "text", label: "Başlangıç Sermayeniz", placeholder: "Örn: $50,000", required: true },
-        ],
-      },
-      {
-        id: "plan",
-        title: "İş Planı",
-        description: "Şirketinizin iş planını açıklayın",
-        fields: [
-          { id: "businessPlan", type: "textarea", label: "İş Planınız", placeholder: "Şirketinizin nasıl çalışacağını açıklayın...", required: true },
-          { id: "employees", type: "text", label: "Planlanan Çalışan Sayısı", placeholder: "Örn: 5-10", required: true },
-          { id: "uniqueness", type: "textarea", label: "Şirketinizi Özel Kılan Nedir?", placeholder: "Diğer şirketlerden farkınız...", required: true },
-        ],
-      },
-    ],
-  },
-  "taksici": {
-    title: "Taksici Başvurusu",
-    steps: [
-      {
-        id: "personal",
-        title: "Kişisel Bilgiler",
-        description: "Karakter bilgilerinizi girin",
-        fields: [
-          { id: "characterName", type: "text", label: "Karakter Adı Soyadı", placeholder: "Örn: John Doe", required: true },
-          { id: "age", type: "text", label: "Karakter Yaşı", placeholder: "Örn: 25", required: true },
-          { id: "phone", type: "text", label: "Telefon Numarası", placeholder: "Örn: 555-1234", required: true },
-        ],
-      },
-      {
-        id: "driving",
-        title: "Sürüş Bilgileri",
-        description: "Sürüş deneyiminiz hakkında bilgi verin",
-        fields: [
-          { id: "license", type: "radio", label: "Ehliyet Durumunuz", options: ["Var", "Yok"], required: true },
-          { id: "accidents", type: "radio", label: "Trafik Kazası Geçmişi", options: ["Evet", "Hayır"], required: true },
-          { id: "cityKnowledge", type: "select", label: "Şehir Bilginiz", options: ["Çok İyi", "İyi", "Orta", "Zayıf"], required: true },
-        ],
-      },
-      {
-        id: "availability",
-        title: "Çalışma Saatleri",
-        description: "Ne zaman çalışabileceğinizi belirtin",
-        fields: [
-          { id: "workHours", type: "select", label: "Haftalık Çalışma Saati", options: ["1-10 saat", "10-20 saat", "20-30 saat", "30+ saat"], required: true },
-          { id: "whyTaxi", type: "textarea", label: "Neden Taksici Olmak İstiyorsunuz?", placeholder: "Motivasyonunuzu açıklayın...", required: true },
-        ],
-      },
-    ],
-  },
-  "hastane": {
-    title: "LSFMD Hastane Birimi Başvurusu",
-    steps: [
-      {
-        id: "personal",
-        title: "Kişisel Bilgiler",
-        description: "Karakter bilgilerinizi girin",
-        fields: [
-          { id: "characterName", type: "text", label: "Karakter Adı Soyadı", placeholder: "Örn: John Doe", required: true },
-          { id: "age", type: "text", label: "Karakter Yaşı", placeholder: "Örn: 25", required: true },
-          { id: "phone", type: "text", label: "Telefon Numarası", placeholder: "Örn: 555-1234", required: true },
-        ],
-      },
-      {
-        id: "medical",
-        title: "Tıbbi Bilgiler",
-        description: "Tıbbi geçmişiniz ve eğitiminiz",
-        fields: [
-          { id: "education", type: "textarea", label: "Tıbbi Eğitiminiz", placeholder: "Karakterinizin aldığı tıbbi eğitimi açıklayın...", required: true },
-          { id: "department", type: "select", label: "Başvurmak İstediğiniz Birim", options: ["Acil Servis", "Paramedik", "Hemşirelik", "Doktor"], required: true },
-          { id: "experience", type: "textarea", label: "RP Deneyiminiz", placeholder: "Daha önce tıbbi RP deneyiminiz var mı?", required: true },
-        ],
-      },
-      {
-        id: "scenario",
-        title: "Senaryo Soruları",
-        description: "Aşağıdaki senaryolara nasıl tepki verirsiniz?",
-        fields: [
-          { id: "scenario1", type: "textarea", label: "Senaryo 1: Çoklu yaralı bir kaza ihbarı alıyorsunuz. Nasıl müdahale edersiniz?", placeholder: "Cevabınızı yazın...", required: true },
-          { id: "scenario2", type: "textarea", label: "Senaryo 2: Bir hasta agresif davranıyor ve tedaviyi reddediyor. Ne yaparsınız?", placeholder: "Cevabınızı yazın...", required: true },
-        ],
-      },
-    ],
-  },
-};
+interface FormTemplate {
+  id: string;
+  title: string;
+  description: string | null;
+  cover_image_url: string | null;
+  is_active: boolean;
+  questions: FormQuestion[];
+  settings: FormSettings;
+}
 
 // Floating particles generator
 const generateFloatingParticles = (count: number) => {
@@ -220,51 +41,83 @@ const BasvuruForm = () => {
   const { formId } = useParams<{ formId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [formTemplate, setFormTemplate] = useState<FormTemplate | null>(null);
+  const [formData, setFormData] = useState<Record<string, string | string[]>>({});
   const particles = useMemo(() => generateFloatingParticles(15), []);
 
-  const formConfig = formId ? formConfigs[formId] : null;
+  // Load form template
+  useEffect(() => {
+    const loadFormTemplate = async () => {
+      if (!formId) {
+        setIsLoading(false);
+        return;
+      }
 
-  const {
-    currentStep,
-    totalSteps,
-    formData,
-    updateField,
-    saveField,
-    saveAll,
-    clearSaved,
-    nextStep,
-    prevStep,
-    goToStep,
-    isCurrentStepValid,
-    isFieldSaved,
-    currentStepData,
-  } = useApplicationForm(formId || "", formConfig?.steps || []);
+      try {
+        const { data, error } = await supabase
+          .from('form_templates')
+          .select('*')
+          .eq('id', formId)
+          .eq('is_active', true)
+          .maybeSingle();
 
-  if (!formConfig) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl text-foreground mb-4">Form bulunamadı</h1>
-          <Link to="/basvuru" className="text-primary hover:underline">
-            Başvuru merkezine dön
-          </Link>
-        </div>
-      </div>
-    );
-  }
+        if (error) {
+          console.error('Form template fetch error:', error);
+          toast({
+            title: "Hata",
+            description: "Form yüklenirken bir hata oluştu.",
+            variant: "destructive",
+          });
+        } else if (data) {
+          setFormTemplate({
+            ...data,
+            questions: data.questions as FormQuestion[],
+            settings: data.settings as FormSettings
+          });
+        }
+      } catch (error) {
+        console.error('Load error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleSaveAll = () => {
-    saveAll();
-    toast({
-      title: "Kaydedildi",
-      description: "Tüm cevaplarınız kaydedildi.",
+    loadFormTemplate();
+  }, [formId, toast]);
+
+  const updateField = (questionId: string, value: string | string[]) => {
+    setFormData(prev => ({
+      ...prev,
+      [questionId]: value
+    }));
+  };
+
+  const handleCheckboxChange = (questionId: string, option: string, checked: boolean) => {
+    const currentValues = (formData[questionId] as string[]) || [];
+    if (checked) {
+      updateField(questionId, [...currentValues, option]);
+    } else {
+      updateField(questionId, currentValues.filter(v => v !== option));
+    }
+  };
+
+  const isFormValid = () => {
+    if (!formTemplate) return false;
+    
+    return formTemplate.questions.every(question => {
+      if (!question.required) return true;
+      const value = formData[question.id];
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return value && value.toString().trim() !== '';
     });
   };
 
   const handleSubmit = async () => {
-    // Check if user is authenticated
     if (!user) {
       toast({
         title: "Giriş Yapmalısınız",
@@ -274,11 +127,19 @@ const BasvuruForm = () => {
       return;
     }
 
-    // Validate form ID
-    if (!formId || !['whitelist', 'lspd-akademi', 'sirket', 'taksici', 'hastane'].includes(formId)) {
+    if (!formTemplate || !formId) {
       toast({
         title: "Hata",
-        description: "Geçersiz başvuru türü.",
+        description: "Form bilgileri eksik.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isFormValid()) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "Lütfen tüm zorunlu alanları doldurun.",
         variant: "destructive",
       });
       return;
@@ -287,12 +148,20 @@ const BasvuruForm = () => {
     setIsSubmitting(true);
 
     try {
+      // Format content with question labels for better readability
+      const formattedContent: Record<string, string> = {};
+      formTemplate.questions.forEach(question => {
+        const value = formData[question.id];
+        const formattedValue = Array.isArray(value) ? value.join(', ') : (value || '');
+        formattedContent[question.label || question.id] = formattedValue;
+      });
+
       const { error } = await supabase
         .from('applications')
         .insert({
           user_id: user.id,
           type: formId,
-          content: formData,
+          content: formattedContent,
           status: 'pending'
         });
 
@@ -301,9 +170,6 @@ const BasvuruForm = () => {
         throw error;
       }
 
-      // Clear localStorage after successful submission
-      clearSaved();
-      
       toast({
         title: "Başvurunuz Gönderildi",
         description: "Başvurunuz incelemeye alınacaktır.",
@@ -321,114 +187,166 @@ const BasvuruForm = () => {
     }
   };
 
-  const renderField = (field: typeof currentStepData.fields[0]) => {
-    const value = formData[field.id] || "";
-    const isSaved = isFieldSaved(field.id);
-
-    const handleFieldSave = () => {
-      saveField(field.id);
-      toast({
-        title: "Kaydedildi",
-        description: `${field.label} kaydedildi.`,
-      });
-    };
+  const renderQuestion = (question: FormQuestion, index: number) => {
+    const value = formData[question.id];
 
     return (
       <motion.div
-        key={field.id}
-        initial={{ opacity: 0, y: 10 }}
+        key={question.id}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-2"
+        transition={{ delay: index * 0.1 }}
+        className="space-y-3"
       >
-        <div className="flex items-center justify-between">
-          <label className="text-sm text-foreground/80">
-            {field.label}
-            {field.required && <span className="text-primary ml-1">*</span>}
-          </label>
-          <button
-            onClick={handleFieldSave}
-            className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded transition-all ${
-              isSaved
-                ? "text-primary bg-primary/10"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-            }`}
-          >
-            {isSaved ? <Check className="w-3 h-3" /> : <Save className="w-3 h-3" />}
-            {isSaved ? "Kaydedildi" : "Kaydet"}
-          </button>
-        </div>
+        <Label className="text-foreground">
+          {question.label}
+          {question.required && <span className="text-destructive ml-1">*</span>}
+        </Label>
 
-        {field.type === "text" && (
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => updateField(field.id, e.target.value)}
-            placeholder={field.placeholder}
-            className="w-full px-4 py-3 bg-card/40 border border-border/30 rounded-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors"
+        {question.type === 'short_text' && (
+          <Input
+            value={(value as string) || ''}
+            onChange={(e) => updateField(question.id, e.target.value)}
+            placeholder={question.placeholder || ''}
+            className="bg-card/40 border-border/30"
           />
         )}
 
-        {field.type === "textarea" && (
-          <textarea
-            value={value}
-            onChange={(e) => updateField(field.id, e.target.value)}
-            placeholder={field.placeholder}
-            rows={4}
-            className="w-full px-4 py-3 bg-card/40 border border-border/30 rounded-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 transition-colors resize-none"
+        {question.type === 'paragraph' && (
+          <Textarea
+            value={(value as string) || ''}
+            onChange={(e) => updateField(question.id, e.target.value)}
+            placeholder={question.placeholder || ''}
+            className="bg-card/40 border-border/30 min-h-[120px] resize-none"
           />
         )}
 
-        {field.type === "select" && field.options && (
-          <select
-            value={value}
-            onChange={(e) => updateField(field.id, e.target.value)}
-            className="w-full px-4 py-3 bg-card/40 border border-border/30 rounded-lg text-foreground focus:outline-none focus:border-primary/50 transition-colors appearance-none cursor-pointer"
-          >
-            <option value="">Seçiniz...</option>
-            {field.options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+        {question.type === 'number' && (
+          <Input
+            type="number"
+            value={(value as string) || ''}
+            onChange={(e) => updateField(question.id, e.target.value)}
+            placeholder={question.placeholder || ''}
+            className="bg-card/40 border-border/30 max-w-[200px]"
+          />
         )}
 
-        {field.type === "radio" && field.options && (
-          <div className="flex gap-4">
-            {field.options.map((option) => (
-              <label
-                key={option}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-all ${
-                  value === option
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-border/30 bg-card/40 text-foreground/70 hover:border-border/50"
-                }`}
+        {question.type === 'discord_id' && (
+          <Input
+            value={(value as string) || ''}
+            onChange={(e) => updateField(question.id, e.target.value)}
+            placeholder={question.placeholder || 'Örn: 123456789012345678'}
+            className="bg-card/40 border-border/30 max-w-[300px] font-mono"
+          />
+        )}
+
+        {question.type === 'radio' && question.options && (
+          <RadioGroup
+            value={(value as string) || ''}
+            onValueChange={(val) => updateField(question.id, val)}
+            className="space-y-2"
+          >
+            {question.options.map((option, optionIndex) => (
+              <div
+                key={optionIndex}
+                className="flex items-center space-x-3 p-3 rounded-lg border border-border/30 bg-card/40 hover:border-primary/30 transition-colors"
               >
-                <input
-                  type="radio"
-                  name={field.id}
-                  value={option}
-                  checked={value === option}
-                  onChange={(e) => updateField(field.id, e.target.value)}
-                  className="sr-only"
-                />
-                <div
-                  className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    value === option ? "border-primary" : "border-muted-foreground/50"
-                  }`}
+                <RadioGroupItem value={option} id={`${question.id}-${optionIndex}`} />
+                <Label
+                  htmlFor={`${question.id}-${optionIndex}`}
+                  className="text-foreground cursor-pointer flex-1"
                 >
-                  {value === option && (
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                  )}
-                </div>
-                {option}
-              </label>
+                  {option}
+                </Label>
+              </div>
             ))}
+          </RadioGroup>
+        )}
+
+        {question.type === 'checkbox' && question.options && (
+          <div className="space-y-2">
+            {question.options.map((option, optionIndex) => {
+              const isChecked = ((value as string[]) || []).includes(option);
+              return (
+                <div
+                  key={optionIndex}
+                  className="flex items-center space-x-3 p-3 rounded-lg border border-border/30 bg-card/40 hover:border-primary/30 transition-colors"
+                >
+                  <Checkbox
+                    id={`${question.id}-${optionIndex}`}
+                    checked={isChecked}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange(question.id, option, checked as boolean)
+                    }
+                  />
+                  <Label
+                    htmlFor={`${question.id}-${optionIndex}`}
+                    className="text-foreground cursor-pointer flex-1"
+                  >
+                    {option}
+                  </Label>
+                </div>
+              );
+            })}
           </div>
         )}
       </motion.div>
     );
   };
+
+  // Loading state
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Form not found
+  if (!formTemplate) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <AlertCircle className="w-16 h-16 mx-auto text-muted-foreground" />
+            <h1 className="text-2xl text-foreground">Form Bulunamadı</h1>
+            <p className="text-muted-foreground">Bu form mevcut değil veya aktif değil.</p>
+            <Link to="/basvuru" className="inline-block text-primary hover:underline">
+              Başvuru merkezine dön
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-display text-foreground">Giriş Yapmalısınız</h1>
+            <p className="text-muted-foreground">Başvuru yapabilmek için önce giriş yapmanız gerekmektedir.</p>
+            <Link 
+              to="/"
+              className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Ana Sayfaya Dön
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
@@ -437,7 +355,7 @@ const BasvuruForm = () => {
         {particles.map((particle) => (
           <motion.div
             key={particle.id}
-            className="absolute rounded-full bg-primary/20"
+            className="absolute rounded-full bg-primary/30"
             style={{
               width: particle.size,
               height: particle.size,
@@ -446,7 +364,9 @@ const BasvuruForm = () => {
             }}
             animate={{
               y: [0, -80, 0],
-              opacity: [0.2, 0.5, 0.2],
+              x: [0, Math.random() * 40 - 20, 0],
+              opacity: [0, 0.5, 0],
+              scale: [0.5, 1, 0.5],
             }}
             transition={{
               duration: particle.duration,
@@ -458,176 +378,90 @@ const BasvuruForm = () => {
         ))}
       </div>
 
-      {/* Background gradient */}
+      {/* Background */}
       <div className="fixed inset-0 hero-gradient pointer-events-none z-[0]" />
+      <div className="fixed top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-[0]" />
 
       <Header />
 
-      <main className="flex-1 pt-28 pb-20 relative z-10">
+      <main className="flex-1 pt-32 pb-24 relative z-10">
         <div className="container mx-auto px-4 md:px-6 max-w-3xl">
           {/* Back Button */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
             <Link
               to="/basvuru"
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-2.5 text-muted-foreground hover:text-foreground transition-colors group"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm">Geri Dön</span>
-            </Link>
-          </motion.div>
-
-          {/* Form Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
-          >
-            <h1 className="font-display text-3xl md:text-4xl text-foreground tracking-wide mb-3">
-              {formConfig.title}
-            </h1>
-            <div className="h-px w-32 bg-gradient-to-r from-transparent via-primary to-transparent mx-auto" />
-          </motion.div>
-
-          {/* Step Indicators */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center justify-center gap-2 mb-10"
-          >
-            {formConfig.steps.map((step, index) => (
-              <button
-                key={step.id}
-                onClick={() => goToStep(index)}
-                className="flex items-center gap-2 group"
+              <motion.div
+                whileHover={{ x: -4 }}
+                className="p-2 rounded-lg bg-card/50 border border-border/30 group-hover:border-primary/30 transition-colors"
               >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
-                    index === currentStep
-                      ? "bg-primary text-background"
-                      : index < currentStep
-                      ? "bg-primary/20 text-primary"
-                      : "bg-card/50 text-muted-foreground border border-border/30"
-                  }`}
-                >
-                  {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
-                </div>
-                {index < formConfig.steps.length - 1 && (
-                  <div
-                    className={`w-8 h-px ${
-                      index < currentStep ? "bg-primary/50" : "bg-border/30"
-                    }`}
-                  />
-                )}
-              </button>
-            ))}
+                <ArrowLeft className="w-4 h-4" />
+              </motion.div>
+              <span className="text-sm tracking-wide">Başvuru Merkezi</span>
+            </Link>
           </motion.div>
 
           {/* Form Card */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-card/30 backdrop-blur-sm border border-border/20 rounded-xl p-6 md:p-8"
+            transition={{ delay: 0.1 }}
+            className="bg-card/40 border border-border/30 rounded-xl overflow-hidden"
           >
-            {/* Step Title */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="mb-8"
-              >
-                <h2 className="text-xl text-foreground font-medium mb-2">
-                  {currentStepData?.title}
-                </h2>
-                {currentStepData?.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {currentStepData.description}
-                  </p>
-                )}
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Fields */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentStep}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="space-y-6"
-              >
-                {currentStepData?.fields.map(renderField)}
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Navigation */}
-            <div className="flex items-center justify-between mt-10 pt-6 border-t border-border/20">
-              <button
-                onClick={prevStep}
-                disabled={currentStep === 0}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Geri
-              </button>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSaveAll}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-border/30 hover:border-border/50 rounded-lg transition-all"
-                >
-                  <Save className="w-4 h-4" />
-                  Kaydet
-                </button>
-
-                {currentStep === totalSteps - 1 ? (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={!isCurrentStepValid() || isSubmitting}
-                    className="flex items-center gap-2 px-5 py-2.5 text-sm bg-primary text-background rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Gönderiliyor...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        Gönder
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    onClick={nextStep}
-                    disabled={!isCurrentStepValid()}
-                    className="flex items-center gap-2 px-5 py-2.5 text-sm bg-primary/10 text-primary border border-primary/30 rounded-lg hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    İleri
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                )}
+            {/* Cover Image */}
+            {formTemplate.cover_image_url && (
+              <div className="w-full h-48 overflow-hidden">
+                <img
+                  src={formTemplate.cover_image_url}
+                  alt={formTemplate.title}
+                  className="w-full h-full object-cover"
+                />
               </div>
+            )}
+
+            {/* Form Header */}
+            <div className="p-8 border-b border-border/20">
+              <h1 className="text-3xl font-display text-foreground mb-2">
+                {formTemplate.title}
+              </h1>
+              {formTemplate.description && (
+                <p className="text-muted-foreground">{formTemplate.description}</p>
+              )}
+            </div>
+
+            {/* Questions */}
+            <div className="p-8 space-y-8">
+              {formTemplate.questions.map((question, index) =>
+                renderQuestion(question, index)
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <div className="p-8 pt-0">
+              <Button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !isFormValid()}
+                className="w-full py-6 text-lg gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Gönderiliyor...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Başvuruyu Gönder
+                  </>
+                )}
+              </Button>
             </div>
           </motion.div>
-
-          {/* Progress text */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="text-center text-xs text-muted-foreground mt-6"
-          >
-            Adım {currentStep + 1} / {totalSteps}
-          </motion.p>
         </div>
       </main>
 
