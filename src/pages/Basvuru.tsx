@@ -30,6 +30,8 @@ interface ApplicationCardProps {
   featured?: boolean;
   delay?: number;
   coverImage?: string | null;
+  rejectionReason?: string | null;
+  onReapply?: () => void;
 }
 
 interface HistoryItemProps {
@@ -45,6 +47,7 @@ interface UserApplication {
   type: string;
   status: string;
   created_at: string;
+  admin_note: string | null;
 }
 
 // Floating particles generator
@@ -59,7 +62,7 @@ const generateFloatingParticles = (count: number) => {
   }));
 };
 
-const ApplicationCard = ({ title, description, status, formId, featured, delay = 0, coverImage }: ApplicationCardProps) => {
+const ApplicationCard = ({ title, description, status, formId, featured, delay = 0, coverImage, rejectionReason, onReapply }: ApplicationCardProps) => {
   const getStatusContent = () => {
     switch (status) {
       case "open":
@@ -103,9 +106,27 @@ const ApplicationCard = ({ title, description, status, formId, featured, delay =
         );
       case "rejected":
         return (
-          <div className="py-3 text-center text-destructive text-sm border border-destructive/20 rounded-md bg-destructive/5 flex items-center justify-center gap-2">
-            <XCircle className="w-4 h-4" />
-            Başvurunuz reddedildi
+          <div className="space-y-3">
+            <div className="py-3 text-center text-destructive text-sm border border-destructive/20 rounded-md bg-destructive/5 flex items-center justify-center gap-2">
+              <XCircle className="w-4 h-4" />
+              Başvurunuz reddedildi
+            </div>
+            {rejectionReason && (
+              <div className="p-3 bg-destructive/5 border border-destructive/20 rounded-md">
+                <p className="text-xs text-muted-foreground mb-1">Ret Sebebi:</p>
+                <p className="text-sm text-foreground">{rejectionReason}</p>
+              </div>
+            )}
+            {onReapply && (
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={onReapply}
+                className="w-full py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-md font-medium transition-all duration-300 border border-primary/20 hover:border-primary/40 text-sm tracking-wide"
+              >
+                Tekrar Başvur
+              </motion.button>
+            )}
           </div>
         );
       default:
@@ -267,7 +288,7 @@ const Basvuru = () => {
         // Fetch user's applications
         const { data: applications, error: appError } = await supabase
           .from('applications')
-          .select('id, type, status, created_at')
+          .select('id, type, status, created_at, admin_note')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
@@ -566,6 +587,8 @@ const Basvuru = () => {
                             featured={true}
                             delay={0.1 + index * 0.1}
                             coverImage={template.cover_image_url}
+                            rejectionReason={userApplications.find(a => a.type === template.id && a.status === 'rejected')?.admin_note}
+                            onReapply={getApplicationStatus(template.id, template) === 'rejected' ? () => navigate(`/basvuru/${template.id}`) : undefined}
                           />
                         ))}
                       </div>
@@ -587,6 +610,8 @@ const Basvuru = () => {
                             featured={true}
                             delay={0.2 + index * 0.1}
                             coverImage={template.cover_image_url}
+                            rejectionReason={userApplications.find(a => a.type === template.id && a.status === 'rejected')?.admin_note}
+                            onReapply={getApplicationStatus(template.id, template) === 'rejected' ? () => navigate(`/basvuru/${template.id}`) : undefined}
                           />
                         ))}
                       </div>
