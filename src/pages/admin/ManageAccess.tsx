@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { generateTOTP } from '@epic-web/totp';
+import { generateTOTP, getTOTPAuthUri } from '@epic-web/totp';
 import QRCode from 'qrcode';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import type { Admin2FASettings, AdminUser } from '@/types/admin2fa';
@@ -252,15 +252,20 @@ const ManageAccessContent: React.FC = () => {
     try {
       // Generate TOTP secret
       const { secret, otp, ...totpConfig } = await generateTOTP({
-        algorithm: 'SHA1',
+        algorithm: 'SHA-1',
         period: 30,
         digits: 6,
       });
 
-      // Create OTP Auth URI
-      const issuer = 'HayalRP Admin';
-      const accountName = username || 'Admin';
-      const otpAuthUri = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
+      // Create OTP Auth URI using the library function
+      const otpAuthUri = getTOTPAuthUri({
+        secret,
+        issuer: 'HayalRP Admin',
+        accountName: username || 'Admin',
+        algorithm: 'SHA-1',
+        digits: 6,
+        period: 30,
+      });
 
       // Generate QR code
       const qrDataUrl = await QRCode.toDataURL(otpAuthUri, {

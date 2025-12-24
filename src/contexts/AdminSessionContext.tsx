@@ -244,6 +244,9 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const result = await verifyTOTP({
         otp: code,
         secret: admin2FASettings.totp_secret,
+        algorithm: 'SHA-1',
+        period: 30,
+        digits: 6,
         window: 1, // Allow 1 period before/after for clock skew
       });
 
