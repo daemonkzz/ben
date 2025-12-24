@@ -4,7 +4,7 @@ import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, DataURL } from '@excalidraw/excalidraw/types';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
-import { Image as ImageIcon, Save, Loader2, RotateCcw, Check, AlertCircle } from 'lucide-react';
+import { Image as ImageIcon, Save, Loader2, RotateCcw, Check, AlertCircle, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { GalleryPickerModal } from '@/components/admin/updates/GalleryPickerModal';
 import { useWhiteboardSync } from '@/hooks/useWhiteboardSync';
@@ -30,10 +30,13 @@ export default function WhiteboardEditor() {
     hasUnsavedChanges,
     lastSavedAt,
     initialData,
+    lastSavedStats,
+    currentStats,
     setExcalidrawAPI,
     handleChange,
     saveNow,
     resetWhiteboard,
+    captureCurrentState,
   } = useWhiteboardSync({
     autoSaveDelay: 1200,
   });
@@ -44,13 +47,18 @@ export default function WhiteboardEditor() {
     setExcalidrawAPI(api);
   }, [setExcalidrawAPI]);
 
-  // Helper function to convert URL to data URL
-  const urlToDataURL = async (url: string): Promise<DataURL> => {
+  // Helper function to convert URL to data URL with proper mimeType detection
+  const urlToDataURL = async (url: string): Promise<{ dataURL: DataURL; mimeType: string }> => {
     const response = await fetch(url);
     const blob = await response.blob();
+    const mimeType = blob.type || 'image/png';
+    
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as DataURL);
+      reader.onloadend = () => resolve({ 
+        dataURL: reader.result as DataURL,
+        mimeType 
+      });
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
@@ -66,13 +74,15 @@ export default function WhiteboardEditor() {
     try {
       for (let i = 0; i < urls.length; i++) {
         const url = urls[i];
-        const dataURL = await urlToDataURL(url);
+        const { dataURL, mimeType } = await urlToDataURL(url);
         const fileId = `gallery_${Date.now()}_${i}`;
+        
+        console.log('[WhiteboardEditor] Adding file:', { fileId, mimeType });
         
         excalidrawAPI.addFiles([{
           id: fileId as any,
           dataURL,
-          mimeType: 'image/webp',
+          mimeType: mimeType as any,
           created: Date.now(),
         }]);
 
@@ -95,20 +105,28 @@ export default function WhiteboardEditor() {
         });
       }
 
-      toast.success(`${urls.length} resim eklendi`);
+      // Wait for Excalidraw to process the changes, then capture state
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          captureCurrentState();
+          console.log('[WhiteboardEditor] State captured after image add');
+        }, 100);
+      });
+
+      toast.success(`${urls.length} resim eklendi - Kaydetmeyi unutmayın!`);
     } catch (err) {
       console.error('[WhiteboardEditor] Error adding images:', err);
       toast.error('Resim eklenirken hata oluştu');
     }
-  }, [excalidrawAPI]);
+  }, [excalidrawAPI, captureCurrentState]);
 
   // Manual save with feedback
   const handleManualSave = async () => {
     const success = await saveNow();
     if (success) {
-      toast.success('Kaydedildi');
+      toast.success('Kaydedildi ve doğrulandı ✓');
     } else {
-      toast.error('Kaydetme başarısız');
+      toast.error('Kaydetme başarısız - Konsolu kontrol edin');
     }
   };
 
@@ -126,16 +144,16 @@ export default function WhiteboardEditor() {
   const formatLastSaved = () => {
     if (!lastSavedAt) return null;
     const diff = Date.now() - lastSavedAt.getTime();
-    if (diff < 60000) return 'Az önce kaydedildi';
+    if (diff < 60000) return 'Az önce';
     const mins = Math.floor(diff / 60000);
-    return `${mins} dk önce kaydedildi`;
+    return `${mins} dk önce`;
   };
 
   return (
     <AdminLayout activeTab="canliharita">
       <div className="h-screen flex flex-col">
         {/* Toolbar */}
-        <div className="bg-card border-b border-border p-4 flex items-center justify-between">
+        <div className="bg-card border-b border-border p-4 flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-foreground">Canlı Harita Editörü</h1>
             <Button
@@ -149,7 +167,17 @@ export default function WhiteboardEditor() {
             </Button>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Debug Stats */}
+            <div className="flex items-center gap-2 text-xs font-mono bg-muted/50 px-2 py-1 rounded">
+              <Database className="w-3 h-3" />
+              <span>Şimdi: {currentStats.elementCount}e/{currentStats.fileCount}f</span>
+              <span className="text-muted-foreground">|</span>
+              <span className="text-green-500">
+                DB: {lastSavedStats?.elementCount ?? '?'}e/{lastSavedStats?.fileCount ?? '?'}f
+              </span>
+            </div>
+
             {/* Save status indicator */}
             <div className="flex items-center gap-2 text-sm">
               {isSaving ? (
@@ -160,7 +188,7 @@ export default function WhiteboardEditor() {
               ) : hasUnsavedChanges ? (
                 <span className="text-amber-500 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
-                  Kaydedilmemiş değişiklikler
+                  Kaydedilmemiş
                 </span>
               ) : lastSavedAt ? (
                 <span className="text-green-500 flex items-center gap-2">

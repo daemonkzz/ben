@@ -3,10 +3,11 @@ import { Excalidraw } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Eye, EyeOff, Wifi, WifiOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface SceneData {
   elements: any[];
@@ -22,6 +23,8 @@ export default function LiveMap() {
   const [isConnected, setIsConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [followMode, setFollowMode] = useState(true);
+  const [elementCount, setElementCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null);
 
@@ -36,48 +39,91 @@ export default function LiveMap() {
     if (!api) return;
     
     try {
-      api.scrollToContent(api.getSceneElements(), {
-        fitToViewport: true,
-        viewportZoomFactor: 0.9,
-      });
+      const elements = api.getSceneElements();
+      if (elements.length > 0) {
+        api.scrollToContent(elements, {
+          fitToViewport: true,
+          viewportZoomFactor: 0.9,
+        });
+      }
     } catch (e) {
       console.log('[LiveMap] scrollToContent not available');
     }
   }, []);
 
-  // Load initial whiteboard data
-  useEffect(() => {
-    const loadWhiteboard = async () => {
-      try {
-        console.log('[LiveMap] Loading whiteboard...');
-        const { data, error } = await supabase
-          .from('whiteboards')
-          .select('*')
-          .eq('name', 'Ana Harita')
-          .maybeSingle();
+  // Load whiteboard data function (reusable)
+  const loadWhiteboard = useCallback(async (showToast = false) => {
+    try {
+      console.log('[LiveMap] Loading whiteboard...');
+      const { data, error } = await supabase
+        .from('whiteboards')
+        .select('*')
+        .eq('name', 'Ana Harita')
+        .maybeSingle();
 
-        if (error) {
-          console.error('[LiveMap] Load error:', error);
-          return;
-        }
+      if (error) {
+        console.error('[LiveMap] Load error:', error);
+        if (showToast) toast.error('Yükleme hatası');
+        return null;
+      }
 
-        if (data) {
-          console.log('[LiveMap] Loaded whiteboard:', data.id);
-          setWhiteboardId(data.id);
-          const sceneData = data.scene_data as SceneData | null;
-          if (sceneData && sceneData.elements && sceneData.elements.length > 0) {
+      if (data) {
+        console.log('[LiveMap] Loaded whiteboard:', data.id);
+        setWhiteboardId(data.id);
+        const sceneData = data.scene_data as SceneData | null;
+        
+        if (sceneData) {
+          const count = sceneData.elements?.length || 0;
+          const fileCount = sceneData.files ? Object.keys(sceneData.files).length : 0;
+          
+          console.log('[LiveMap] Scene data:', { elements: count, files: fileCount });
+          setElementCount(count);
+          
+          if (count > 0) {
             setInitialData(sceneData);
+            if (showToast) toast.success(`${count} öğe yüklendi`);
+            return sceneData;
           }
         }
-      } catch (err) {
-        console.error('[LiveMap] Load error:', err);
-      } finally {
-        setIsLoading(false);
+        
+        if (showToast) toast.info('Harita boş');
       }
-    };
-
-    loadWhiteboard();
+      return null;
+    } catch (err) {
+      console.error('[LiveMap] Load error:', err);
+      if (showToast) toast.error('Yükleme hatası');
+      return null;
+    }
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    const init = async () => {
+      await loadWhiteboard();
+      setIsLoading(false);
+    };
+    init();
+  }, [loadWhiteboard]);
+
+  // Manual refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    const sceneData = await loadWhiteboard(true);
+    
+    if (sceneData && excalidrawAPI) {
+      // Apply to existing instance
+      if (sceneData.files && Object.keys(sceneData.files).length > 0) {
+        excalidrawAPI.addFiles(Object.values(sceneData.files));
+      }
+      excalidrawAPI.updateScene({ elements: sceneData.elements });
+      
+      if (followMode) {
+        setTimeout(scrollToContent, 100);
+      }
+    }
+    
+    setIsRefreshing(false);
+  };
 
   // Initial scroll to content after load
   useEffect(() => {
@@ -110,22 +156,26 @@ export default function LiveMap() {
           
           if (newSceneData && newSceneData.elements) {
             try {
+              const newElementCount = newSceneData.elements.length;
+              const newFileCount = newSceneData.files ? Object.keys(newSceneData.files).length : 0;
+              
+              console.log('[LiveMap] Applying update:', { elements: newElementCount, files: newFileCount });
+              
               // IMPORTANT: Add files FIRST so images are available when elements render
               if (newSceneData.files && Object.keys(newSceneData.files).length > 0) {
-                console.log('[LiveMap] Adding files:', Object.keys(newSceneData.files).length);
                 excalidrawAPI.addFiles(Object.values(newSceneData.files));
               }
 
               // Then update elements
-              console.log('[LiveMap] Updating elements:', newSceneData.elements.length);
               excalidrawAPI.updateScene({
                 elements: newSceneData.elements,
               });
 
+              setElementCount(newElementCount);
               setLastUpdate(new Date());
 
               // Auto-scroll to content if follow mode is on
-              if (followMode) {
+              if (followMode && newElementCount > 0) {
                 setTimeout(scrollToContent, 100);
               }
             } catch (e) {
@@ -166,9 +216,24 @@ export default function LiveMap() {
             </Button>
           </Link>
           <h1 className="text-xl font-bold text-foreground">Canlı Harita</h1>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+            {elementCount} öğe
+          </span>
         </div>
         
         <div className="flex items-center gap-4">
+          {/* Refresh button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Yenile</span>
+          </Button>
+
           {/* Follow mode toggle */}
           <Button
             variant="ghost"
@@ -218,6 +283,21 @@ export default function LiveMap() {
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <p className="text-muted-foreground">Harita yükleniyor...</p>
+            </div>
+          </div>
+        ) : elementCount === 0 && !initialData ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-background">
+            <div className="flex flex-col items-center gap-4 text-center p-8">
+              <AlertTriangle className="w-12 h-12 text-amber-500" />
+              <h2 className="text-xl font-semibold text-foreground">Harita Boş</h2>
+              <p className="text-muted-foreground max-w-md">
+                Henüz haritaya içerik eklenmemiş veya veriler yüklenemedi. 
+                Admin panelinden içerik ekleyebilir veya yenilemeyi deneyebilirsiniz.
+              </p>
+              <Button onClick={handleRefresh} disabled={isRefreshing} className="gap-2">
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Tekrar Yükle
+              </Button>
             </div>
           </div>
         ) : (

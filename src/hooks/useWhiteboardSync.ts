@@ -9,10 +9,15 @@ export interface SceneData {
   files: BinaryFiles;
 }
 
+export interface SavedStats {
+  elementCount: number;
+  fileCount: number;
+}
+
 interface UseWhiteboardSyncOptions {
   autoSaveDelay?: number;
   onSaveStart?: () => void;
-  onSaveEnd?: (success: boolean) => void;
+  onSaveEnd?: (success: boolean, stats?: SavedStats) => void;
 }
 
 /**
@@ -45,6 +50,8 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [initialData, setInitialData] = useState<SceneData | null>(null);
+  const [lastSavedStats, setLastSavedStats] = useState<SavedStats | null>(null);
+  const [currentStats, setCurrentStats] = useState<SavedStats>({ elementCount: 0, fileCount: 0 });
 
   // Refs
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null);
@@ -81,8 +88,17 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
           setWhiteboardId(data.id);
           
           const sceneData = data.scene_data as SceneData | null;
-          if (sceneData && sceneData.elements && sceneData.elements.length > 0) {
-            setInitialData(sceneData);
+          if (sceneData) {
+            const elementCount = sceneData.elements?.length || 0;
+            const fileCount = sceneData.files ? Object.keys(sceneData.files).length : 0;
+            
+            console.log('[useWhiteboardSync] Initial data:', { elementCount, fileCount });
+            setLastSavedStats({ elementCount, fileCount });
+            setCurrentStats({ elementCount, fileCount });
+            
+            if (elementCount > 0) {
+              setInitialData(sceneData);
+            }
           }
         } else {
           // Create default whiteboard if not exists
@@ -97,6 +113,7 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
             console.error('[useWhiteboardSync] Create error:', createError);
           } else if (newData) {
             setWhiteboardId(newData.id);
+            setLastSavedStats({ elementCount: 0, fileCount: 0 });
           }
         }
       } catch (err) {
@@ -113,7 +130,7 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
     loadWhiteboard();
   }, []);
 
-  // Core save function
+  // Core save function with read-back verification
   const saveToDatabase = useCallback(async (sceneData: SceneData): Promise<boolean> => {
     const currentWhiteboardId = whiteboardIdRef.current;
 
@@ -131,8 +148,11 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
     setIsSaving(true);
     onSaveStart?.();
 
+    const elementCount = sceneData.elements?.length || 0;
+    const fileCount = sceneData.files ? Object.keys(sceneData.files).length : 0;
+
     try {
-      console.log('[useWhiteboardSync] Saving', sceneData.elements.length, 'elements...');
+      console.log('[useWhiteboardSync] Saving:', { elementCount, fileCount });
 
       const { error } = await supabase
         .from('whiteboards')
@@ -148,10 +168,38 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
         return false;
       }
 
-      console.log('[useWhiteboardSync] Saved successfully');
+      // Read-back verification: re-fetch to confirm data was written
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('whiteboards')
+        .select('scene_data')
+        .eq('id', currentWhiteboardId)
+        .single();
+
+      if (verifyError) {
+        console.error('[useWhiteboardSync] Verification error:', verifyError);
+        onSaveEnd?.(false);
+        return false;
+      }
+
+      const savedScene = verifyData.scene_data as SceneData;
+      const savedElementCount = savedScene?.elements?.length || 0;
+      const savedFileCount = savedScene?.files ? Object.keys(savedScene.files).length : 0;
+
+      console.log('[useWhiteboardSync] Verified:', { savedElementCount, savedFileCount });
+
+      // Check if data was actually saved
+      if (elementCount > 0 && savedElementCount === 0) {
+        console.error('[useWhiteboardSync] VERIFICATION FAILED: Elements were not saved!');
+        toast.error('Kayıt doğrulaması başarısız: Veriler DB\'ye yazılmadı!');
+        onSaveEnd?.(false);
+        return false;
+      }
+
+      const stats: SavedStats = { elementCount: savedElementCount, fileCount: savedFileCount };
+      setLastSavedStats(stats);
       setLastSavedAt(new Date());
       setHasUnsavedChanges(false);
-      onSaveEnd?.(true);
+      onSaveEnd?.(true, stats);
       return true;
     } catch (err) {
       console.error('[useWhiteboardSync] Save error:', err);
@@ -163,14 +211,35 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
     }
   }, [onSaveStart, onSaveEnd]);
 
-  // Manual save - uses current API state
+  // Manual save - prioritizes pending onChange state over API state
   const saveNow = useCallback(async (): Promise<boolean> => {
     const api = excalidrawAPIRef.current;
     
+    // First priority: use pending scene (most recent onChange data)
+    if (pendingSceneRef.current) {
+      console.log('[useWhiteboardSync] Manual save using pending scene');
+      const sceneData = pendingSceneRef.current;
+      
+      // Cancel pending autosave
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      
+      const success = await saveToDatabase(sceneData);
+      if (success) {
+        pendingSceneRef.current = null;
+      }
+      return success;
+    }
+
+    // Fallback: get from API
     if (!api) {
-      console.log('[useWhiteboardSync] Manual save skipped: no API');
+      console.log('[useWhiteboardSync] Manual save skipped: no API and no pending');
       return false;
     }
+
+    console.log('[useWhiteboardSync] Manual save using API state');
 
     // Cancel pending autosave
     if (debounceTimerRef.current) {
@@ -202,6 +271,30 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
     }
   }, [saveToDatabase]);
 
+  // Force capture current state from API (useful after programmatic changes)
+  const captureCurrentState = useCallback(() => {
+    const api = excalidrawAPIRef.current;
+    if (!api) return;
+
+    const sceneData = cloneSceneData(
+      api.getSceneElements(),
+      api.getAppState(),
+      api.getFiles()
+    );
+    
+    pendingSceneRef.current = sceneData;
+    setHasUnsavedChanges(true);
+    setCurrentStats({
+      elementCount: sceneData.elements.length,
+      fileCount: Object.keys(sceneData.files).length,
+    });
+
+    console.log('[useWhiteboardSync] State captured:', {
+      elements: sceneData.elements.length,
+      files: Object.keys(sceneData.files).length,
+    });
+  }, []);
+
   // onChange handler for Excalidraw
   const handleChange = useCallback((
     elements: readonly any[],
@@ -215,6 +308,10 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
     const sceneData = cloneSceneData(elements, appState, files);
     pendingSceneRef.current = sceneData;
     setHasUnsavedChanges(true);
+    setCurrentStats({
+      elementCount: sceneData.elements.length,
+      fileCount: Object.keys(sceneData.files).length,
+    });
 
     // Debounce autosave
     if (debounceTimerRef.current) {
@@ -282,6 +379,8 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
 
       api.resetScene();
       setHasUnsavedChanges(false);
+      setLastSavedStats({ elementCount: 0, fileCount: 0 });
+      setCurrentStats({ elementCount: 0, fileCount: 0 });
       pendingSceneRef.current = null;
       return true;
     } catch (err) {
@@ -298,6 +397,8 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
     hasUnsavedChanges,
     lastSavedAt,
     initialData,
+    lastSavedStats,
+    currentStats,
     
     // Actions
     setExcalidrawAPI,
@@ -305,6 +406,7 @@ export function useWhiteboardSync(options: UseWhiteboardSyncOptions = {}) {
     saveNow,
     flushPendingSave,
     resetWhiteboard,
+    captureCurrentState,
     
     // Refs (for advanced use)
     excalidrawAPIRef,
