@@ -26,10 +26,10 @@ import {
 type TabType = 'basvurular' | 'duyurular' | 'kullanicilar';
 
 interface Application {
-  id: string;
+  id: number;
   user_id: string;
-  form_type: string;
-  form_data: Record<string, string>;
+  type: string;
+  content: Record<string, string>;
   status: string;
   created_at: string;
 }
@@ -42,7 +42,7 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState<TabType>('basvurular');
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   // Check if user has admin role
   useEffect(() => {
@@ -116,7 +116,7 @@ const Admin = () => {
     }
   };
 
-  const updateApplicationStatus = async (id: string, status: 'approved' | 'rejected') => {
+  const updateApplicationStatus = async (id: number, status: 'approved' | 'rejected') => {
     setUpdatingId(id);
     try {
       const { error } = await supabase
@@ -152,8 +152,8 @@ const Admin = () => {
     }
   };
 
-  const getCharacterName = (formData: Record<string, string>) => {
-    return formData?.karakter_adi || formData?.character_name || formData?.isim || 'Belirtilmemiş';
+  const getCharacterName = (content: Record<string, string>) => {
+    return content?.karakter_adi || content?.character_name || content?.isim || 'Belirtilmemiş';
   };
 
   const formatDate = (dateString: string) => {
@@ -166,14 +166,14 @@ const Admin = () => {
     });
   };
 
-  const getFormTypeName = (formType: string) => {
+  const getFormTypeName = (type: string) => {
     const typeMap: Record<string, string> = {
       'lspd-akademi': 'LSPD Akademi',
       'sirket': 'Şirket',
       'taksici': 'Taksici',
       'hastane': 'Hastane',
     };
-    return typeMap[formType] || formType;
+    return typeMap[type] || type;
   };
 
   // Show loading while checking auth
@@ -278,10 +278,10 @@ const Admin = () => {
                     {applications.map((app) => (
                       <TableRow key={app.id} className="border-border">
                         <TableCell className="font-medium text-foreground">
-                          {getCharacterName(app.form_data)}
+                          {getCharacterName(app.content as Record<string, string>)}
                         </TableCell>
                         <TableCell className="text-foreground">
-                          {getFormTypeName(app.form_type)}
+                          {getFormTypeName(app.type)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(app.created_at)}

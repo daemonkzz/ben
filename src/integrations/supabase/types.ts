@@ -94,7 +94,6 @@ export type Database = {
           discord_id: string | null
           id: string
           is_whitelist_approved: boolean | null
-          role_id: number | null
           steam_id: string | null
           username: string | null
         }
@@ -104,7 +103,6 @@ export type Database = {
           discord_id?: string | null
           id: string
           is_whitelist_approved?: boolean | null
-          role_id?: number | null
           steam_id?: string | null
           username?: string | null
         }
@@ -114,38 +112,8 @@ export type Database = {
           discord_id?: string | null
           id?: string
           is_whitelist_approved?: boolean | null
-          role_id?: number | null
           steam_id?: string | null
           username?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      roles: {
-        Row: {
-          created_at: string
-          id: number
-          name: string
-          permissions: Json | null
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-          name: string
-          permissions?: Json | null
-        }
-        Update: {
-          created_at?: string
-          id?: number
-          name?: string
-          permissions?: Json | null
         }
         Relationships: []
       }
