@@ -1,184 +1,117 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight, Calendar, Tag, User } from "lucide-react";
+import { ChevronRight, Calendar, Tag, User, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-
-interface ContentSection {
-  id: string;
-  type: "heading" | "subheading" | "paragraph" | "list" | "image";
-  content: string | string[];
-}
-
-interface UpdateDetail {
-  id: number;
-  title: string;
-  subtitle?: string;
-  category: "update" | "news";
-  version?: string;
-  date: string;
-  author?: string;
-  image: string;
-  sections: ContentSection[];
-}
-
-// Sample detailed update data
-const updatesData: UpdateDetail[] = [
-  {
-    id: 1,
-    title: "Yeni Sezon Başlangıcı - Büyük Güncelleme",
-    subtitle: "Sezon 3 ile birlikte gelen tüm yenilikler",
-    category: "update",
-    version: "v2.1.0",
-    date: "23 Aralık 2024",
-    author: "Kaze Ekibi",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-    sections: [
-      {
-        id: "giris",
-        type: "heading",
-        content: "Giriş"
-      },
-      {
-        id: "giris-text",
-        type: "paragraph",
-        content: "Yeni sezonumuz başlıyor! Bu büyük güncelleme ile birlikte sunucumuza birçok yeni özellik, iyileştirme ve içerik ekliyoruz. Oyuncularımızın geri bildirimleri doğrultusunda hazırladığımız bu güncelleme, deneyiminizi bir üst seviyeye taşıyacak."
-      },
-      {
-        id: "yeni-ozellikler",
-        type: "heading",
-        content: "Yeni Özellikler"
-      },
-      {
-        id: "yeni-ozellikler-list",
-        type: "list",
-        content: [
-          "Yeni karakter sınıfı: Büyücü - Güçlü büyüler ve area etkili yeteneklerle donatılmış",
-          "Yeni harita bölgesi: Kayıp Vadisi - Keşfedilmeyi bekleyen gizemli bir alan",
-          "Geliştirilmiş envanter sistemi - Daha fazla alan ve kolay yönetim",
-          "Yeni zanaat sistemi - Eşya üretimi artık daha detaylı"
-        ]
-      },
-      {
-        id: "denge-degisiklikleri",
-        type: "heading",
-        content: "Denge Değişiklikleri"
-      },
-      {
-        id: "denge-subhead",
-        type: "subheading",
-        content: "Savaşçı Sınıfı"
-      },
-      {
-        id: "denge-text",
-        type: "paragraph",
-        content: "Savaşçı sınıfının temel saldırı hasarı %10 artırıldı. Zırh penetrasyonu yeteneği yeniden dengelendi ve artık daha tutarlı sonuçlar veriyor."
-      },
-      {
-        id: "bug-fixes",
-        type: "heading",
-        content: "Hata Düzeltmeleri"
-      },
-      {
-        id: "bug-list",
-        type: "list",
-        content: [
-          "Oyuncuların ara sıra görünmez olmasına neden olan hata düzeltildi",
-          "Envanter kaybına neden olan nadir hata giderildi",
-          "Performans iyileştirmeleri yapıldı"
-        ]
-      }
-    ]
-  },
-  {
-    id: 2,
-    title: "Kış Etkinliği Başladı! Özel Ödüller Sizi Bekliyor",
-    subtitle: "Sınırlı süreli etkinlik ile özel ödüller kazanın",
-    category: "news",
-    date: "21 Aralık 2024",
-    author: "Etkinlik Ekibi",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-    sections: [
-      {
-        id: "etkinlik-giris",
-        type: "heading",
-        content: "Kış Festivali"
-      },
-      {
-        id: "etkinlik-text",
-        type: "paragraph",
-        content: "Kış festivali başladı! Bu özel etkinlik süresince haritada kar yağışı olacak ve özel görevler aktif olacak. Tüm görevleri tamamlayan oyuncular özel kış temalı kostümler kazanacak."
-      }
-    ]
-  },
-  {
-    id: 3,
-    title: "Sunucu Bakım Duyurusu",
-    subtitle: "Planlı bakım çalışması hakkında bilgilendirme",
-    category: "update",
-    version: "v2.0.5",
-    date: "20 Aralık 2024",
-    author: "Teknik Ekip",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-    sections: [
-      {
-        id: "bakim-bilgi",
-        type: "heading",
-        content: "Bakım Detayları"
-      },
-      {
-        id: "bakim-text",
-        type: "paragraph",
-        content: "Sunucularımız 20 Aralık saat 03:00 - 06:00 arasında bakımda olacaktır. Bu süre zarfında oyuna erişim mümkün olmayacaktır."
-      }
-    ]
-  },
-  {
-    id: 4,
-    title: "Yeni Harita Eklendi: Kayıp Vadi",
-    category: "news",
-    date: "16 Aralık 2024",
-    author: "İçerik Ekibi",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-    sections: []
-  },
-  {
-    id: 5,
-    title: "Performans İyileştirmeleri ve Hata Düzeltmeleri",
-    category: "update",
-    version: "v2.0.4",
-    date: "10 Aralık 2024",
-    author: "Teknik Ekip",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-    sections: []
-  },
-  {
-    id: 6,
-    title: "Topluluk Turnuvası Duyurusu",
-    category: "news",
-    date: "09 Aralık 2024",
-    author: "Topluluk Ekibi",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-    sections: []
-  }
-];
+import { supabase } from "@/integrations/supabase/client";
+import type { UpdateData, ContentBlock, UpdateCategory } from "@/types/update";
 
 const GuncellemeDetay = () => {
   const { id } = useParams();
   const [activeSection, setActiveSection] = useState<string>("");
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   
-  const update = updatesData.find((u) => u.id === Number(id));
-  const otherUpdates = updatesData.filter((u) => u.id !== Number(id)).slice(0, 5);
-  
+  const [update, setUpdate] = useState<UpdateData | null>(null);
+  const [otherUpdates, setOtherUpdates] = useState<UpdateData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authorName, setAuthorName] = useState("Yönetici");
+
+  useEffect(() => {
+    if (id) {
+      fetchUpdate(id);
+      fetchOtherUpdates(id);
+    }
+  }, [id]);
+
+  const fetchUpdate = async (updateId: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("updates")
+        .select("*")
+        .eq("id", updateId)
+        .eq("is_published", true)
+        .single();
+
+      if (error) {
+        console.error("Fetch update error:", error);
+        setUpdate(null);
+        return;
+      }
+
+      setUpdate({
+        id: data.id,
+        title: data.title,
+        subtitle: data.subtitle || undefined,
+        category: data.category as UpdateCategory,
+        version: data.version || undefined,
+        cover_image_url: data.cover_image_url || undefined,
+        content: (data.content as ContentBlock[]) || [],
+        is_published: data.is_published,
+        author_id: data.author_id || undefined,
+        published_at: data.published_at || undefined,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+      });
+
+      // Fetch author name
+      if (data.author_id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", data.author_id)
+          .single();
+        if (profile?.username) {
+          setAuthorName(profile.username);
+        }
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchOtherUpdates = async (currentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("updates")
+        .select("id, title, category, version, published_at, cover_image_url")
+        .eq("is_published", true)
+        .neq("id", currentId)
+        .order("published_at", { ascending: false })
+        .limit(5);
+
+      if (error) {
+        console.error("Fetch other updates error:", error);
+        return;
+      }
+
+      setOtherUpdates(
+        (data || []).map((d) => ({
+          id: d.id,
+          title: d.title,
+          category: d.category as UpdateCategory,
+          version: d.version || undefined,
+          cover_image_url: d.cover_image_url || undefined,
+          content: [],
+          is_published: true,
+          published_at: d.published_at || undefined,
+        }))
+      );
+    } catch (error) {
+      console.error("Fetch error:", error);
+    }
+  };
+
   // Get only heading sections for navigation
-  const headingSections = update?.sections.filter(s => s.type === "heading") || [];
+  const headingSections = update?.content.filter((s) => s.type === "heading") || [];
 
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 300;
-      
+
       for (const section of headingSections) {
         const element = sectionRefs.current[section.id];
         if (element) {
@@ -202,11 +135,113 @@ const GuncellemeDetay = () => {
       const elementPosition = element.getBoundingClientRect().top + window.scrollY;
       window.scrollTo({
         top: elementPosition - offset,
-        behavior: "smooth"
+        behavior: "smooth",
       });
       setActiveSection(sectionId);
     }
   };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleDateString("tr-TR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const formatShortDate = (dateString?: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return `${date.getDate().toString().padStart(2, "0")}-${(date.getMonth() + 1)
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const renderFormattedText = (text: string) => {
+    let formatted = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    formatted = formatted.replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, "<em>$1</em>");
+    formatted = formatted.replace(
+      /`([^`]+)`/g,
+      '<code class="px-1.5 py-0.5 bg-muted rounded text-sm font-mono">$1</code>'
+    );
+    return <span dangerouslySetInnerHTML={{ __html: formatted }} />;
+  };
+
+  const renderBlock = (block: ContentBlock) => {
+    switch (block.type) {
+      case "heading":
+        const HeadingTag = `h${block.level || 1}` as keyof JSX.IntrinsicElements;
+        const headingClasses: Record<number, string> = {
+          1: "font-display text-2xl md:text-3xl font-bold text-foreground italic mt-8 mb-4 first:mt-0",
+          2: "font-display text-xl md:text-2xl font-bold text-foreground italic mt-8 mb-4",
+          3: "font-display text-lg md:text-xl font-bold text-foreground italic mt-6 mb-3",
+        };
+        return (
+          <HeadingTag className={headingClasses[block.level || 1]}>
+            {block.content as string}
+          </HeadingTag>
+        );
+
+      case "subheading":
+        return (
+          <h3 className="font-display text-xl font-semibold text-primary italic mt-6 mb-3">
+            {block.content as string}
+          </h3>
+        );
+
+      case "paragraph":
+        return (
+          <p className="text-foreground/70 leading-relaxed mb-4">
+            {renderFormattedText(block.content as string)}
+          </p>
+        );
+
+      case "list":
+        return (
+          <ul className="space-y-3 mb-6">
+            {(block.content as string[]).map((item, i) => (
+              <li key={i} className="flex items-start gap-3 text-foreground/70">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
+                <span>{renderFormattedText(item)}</span>
+              </li>
+            ))}
+          </ul>
+        );
+
+      case "image":
+        return (
+          <div className="my-6 rounded-lg overflow-hidden border border-border/30">
+            <img src={block.content as string} alt="" className="w-full" />
+          </div>
+        );
+
+      case "code":
+        return (
+          <pre className="my-6 p-4 bg-muted rounded-lg overflow-x-auto">
+            <code className="text-sm font-mono text-foreground/80">{block.content as string}</code>
+          </pre>
+        );
+
+      case "quote":
+        return (
+          <blockquote className="my-6 pl-4 border-l-4 border-primary italic text-foreground/70">
+            {block.content as string}
+          </blockquote>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!update) {
     return (
@@ -224,25 +259,27 @@ const GuncellemeDetay = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
-      
+
       {/* Hero Image */}
-      <motion.div 
-        className="relative w-full h-[50vh] md:h-[60vh] overflow-hidden"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
-      >
-        <img
-          src={update.image}
-          alt={update.title}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-transparent to-transparent" />
-      </motion.div>
+      {update.cover_image_url && (
+        <motion.div
+          className="relative w-full h-[50vh] md:h-[60vh] overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          <img
+            src={update.cover_image_url}
+            alt={update.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-transparent to-transparent" />
+        </motion.div>
+      )}
 
       {/* Title Section */}
-      <div className="container mx-auto px-6 -mt-32 relative z-10">
+      <div className={`container mx-auto px-6 ${update.cover_image_url ? "-mt-32" : "pt-32"} relative z-10`}>
         <motion.div
           className="text-center max-w-4xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
@@ -252,11 +289,9 @@ const GuncellemeDetay = () => {
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-foreground italic leading-tight mb-4">
             {update.title}
           </h1>
-          
+
           {update.subtitle && (
-            <p className="text-foreground/60 text-lg md:text-xl mb-6">
-              {update.subtitle}
-            </p>
+            <p className="text-foreground/60 text-lg md:text-xl mb-6">{update.subtitle}</p>
           )}
 
           {/* Divider */}
@@ -268,23 +303,21 @@ const GuncellemeDetay = () => {
               <Tag className="w-3.5 h-3.5" />
               {update.category === "update" ? "Güncelleme" : "Haber"}
             </span>
-            
+
             {update.version && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-foreground/5 border border-foreground/10 rounded-sm">
                 {update.version}
               </span>
             )}
-            
-            {update.author && (
-              <span className="inline-flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5" />
-                {update.author}
-              </span>
-            )}
-            
+
+            <span className="inline-flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5" />
+              {authorName}
+            </span>
+
             <span className="inline-flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
-              {update.date}
+              {formatDate(update.published_at)}
             </span>
           </div>
         </motion.div>
@@ -293,97 +326,60 @@ const GuncellemeDetay = () => {
       {/* Main Content Area */}
       <div className="container mx-auto px-6 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
           {/* Left Sidebar - Navigation */}
-          <motion.aside
-            className="hidden lg:block lg:col-span-2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <div className="sticky top-32">
-              <h4 className="text-xs uppercase tracking-wider text-foreground/40 mb-4 font-medium">
-                İçindekiler
-              </h4>
-              <nav className="space-y-2">
-                {headingSections.map((section) => (
-                  <button
-                    key={section.id}
-                    onClick={() => scrollToSection(section.id)}
-                    className={`block w-full text-left text-sm py-1.5 px-3 rounded-sm transition-all duration-200 ${
-                      activeSection === section.id
-                        ? "text-primary bg-primary/10 border-l-2 border-primary"
-                        : "text-foreground/50 hover:text-foreground/80 hover:bg-foreground/5"
-                    }`}
-                  >
-                    {section.content as string}
-                  </button>
-                ))}
-              </nav>
-            </div>
-          </motion.aside>
+          {headingSections.length > 0 && (
+            <motion.aside
+              className="hidden lg:block lg:col-span-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <div className="sticky top-32">
+                <h4 className="text-xs uppercase tracking-wider text-foreground/40 mb-4 font-medium">
+                  İçindekiler
+                </h4>
+                <nav className="space-y-2">
+                  {headingSections.map((section) => (
+                    <button
+                      key={section.id}
+                      onClick={() => scrollToSection(section.id)}
+                      className={`block w-full text-left text-sm py-1.5 px-3 rounded-sm transition-all duration-200 ${
+                        activeSection === section.id
+                          ? "text-primary bg-primary/10 border-l-2 border-primary"
+                          : "text-foreground/50 hover:text-foreground/80 hover:bg-foreground/5"
+                      }`}
+                    >
+                      {section.content as string}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </motion.aside>
+          )}
 
           {/* Center Content */}
           <motion.main
-            className="lg:col-span-7"
+            className={headingSections.length > 0 ? "lg:col-span-7" : "lg:col-span-9"}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
             <div className="bg-card/30 border border-border/30 rounded-xl p-8 md:p-10">
-              {update.sections.length > 0 ? (
+              {update.content.length > 0 ? (
                 <div className="prose prose-invert max-w-none">
-                  {update.sections.map((section, index) => {
-                    const isHeading = section.type === "heading";
-                    
+                  {update.content.map((block) => {
+                    const isHeading = block.type === "heading";
                     return (
                       <div
-                        key={section.id}
+                        key={block.id}
                         ref={(el) => {
                           if (isHeading) {
-                            sectionRefs.current[section.id] = el;
+                            sectionRefs.current[block.id] = el;
                           }
                         }}
                         className={isHeading ? "scroll-mt-40" : ""}
                       >
-                        {section.type === "heading" && (
-                          <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground italic mt-8 mb-4 first:mt-0">
-                            {section.content as string}
-                          </h2>
-                        )}
-                        
-                        {section.type === "subheading" && (
-                          <h3 className="font-display text-xl font-semibold text-primary italic mt-6 mb-3">
-                            {section.content as string}
-                          </h3>
-                        )}
-                        
-                        {section.type === "paragraph" && (
-                          <p className="text-foreground/70 leading-relaxed mb-4">
-                            {section.content as string}
-                          </p>
-                        )}
-                        
-                        {section.type === "list" && (
-                          <ul className="space-y-3 mb-6">
-                            {(section.content as string[]).map((item, i) => (
-                              <li key={i} className="flex items-start gap-3 text-foreground/70">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 flex-shrink-0" />
-                                <span>{item}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        
-                        {section.type === "image" && (
-                          <div className="my-6 rounded-lg overflow-hidden border border-border/30">
-                            <img
-                              src={section.content as string}
-                              alt=""
-                              className="w-full"
-                            />
-                          </div>
-                        )}
+                        {renderBlock(block)}
                       </div>
                     );
                   })}
@@ -408,7 +404,7 @@ const GuncellemeDetay = () => {
                 <span className="w-8 h-px bg-primary" />
                 Son Güncellemeler
               </h4>
-              
+
               <div className="space-y-3">
                 {otherUpdates.map((item) => (
                   <Link
@@ -417,12 +413,14 @@ const GuncellemeDetay = () => {
                     className="group block bg-card/20 border border-border/20 rounded-lg p-3 hover:border-primary/30 hover:bg-card/40 transition-all duration-300"
                   >
                     <div className="flex gap-3">
-                      <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0">
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
+                      <div className="w-16 h-12 rounded overflow-hidden flex-shrink-0 bg-muted">
+                        {item.cover_image_url && (
+                          <img
+                            src={item.cover_image_url}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <span className="text-[10px] uppercase tracking-wider text-primary">
@@ -434,7 +432,9 @@ const GuncellemeDetay = () => {
                       </div>
                     </div>
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/10">
-                      <span className="text-[10px] text-foreground/40">{item.date}</span>
+                      <span className="text-[10px] text-foreground/40">
+                        {formatShortDate(item.published_at)}
+                      </span>
                       <ChevronRight className="w-3 h-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </Link>

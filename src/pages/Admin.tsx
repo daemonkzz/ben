@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/select';
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 
-type TabType = 'basvurular' | 'formlar' | 'duyurular' | 'kullanicilar';
+type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'kullanicilar';
 type ApplicationFilterType = 'all' | 'whitelist' | 'other';
 type FormFilterType = 'all' | 'whitelist' | 'other';
 
@@ -368,7 +368,7 @@ const Admin = () => {
   const sidebarItems = [
     { id: 'basvurular' as TabType, label: 'Başvurular', icon: FileText },
     { id: 'formlar' as TabType, label: 'Form Şablonları', icon: Settings },
-    { id: 'duyurular' as TabType, label: 'Duyurular', icon: Bell },
+    { id: 'guncellemeler' as TabType, label: 'Güncellemeler', icon: Bell },
     { id: 'kullanicilar' as TabType, label: 'Kullanıcılar', icon: Users },
   ];
 
@@ -691,15 +691,21 @@ const Admin = () => {
           </div>
         )}
 
-        {activeTab === 'duyurular' && (
+        {activeTab === 'guncellemeler' && (
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-foreground">Duyurular</h2>
-              <p className="text-muted-foreground">Duyuruları yönet</p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">Güncellemeler</h2>
+                <p className="text-muted-foreground">Güncellemeler ve haberleri yönet</p>
+              </div>
+              <Button onClick={() => navigate('/admin/update-editor')} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Yeni Güncelleme
+              </Button>
             </div>
             <div className="text-center py-12 bg-card rounded-lg border border-border">
               <Bell className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">Duyuru yönetimi yakında eklenecek</p>
+              <p className="text-muted-foreground">Güncelleme editörüne yönlendirmek için yukarıdaki butona tıklayın</p>
             </div>
           </div>
         )}

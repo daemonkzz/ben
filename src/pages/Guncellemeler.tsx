@@ -1,89 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { supabase } from "@/integrations/supabase/client";
+import type { UpdateCategory, ContentBlock } from "@/types/update";
 
 type Category = "all" | "update" | "news";
 
 interface UpdateItem {
-  id: number;
+  id: string;
   title: string;
-  category: "update" | "news";
+  category: UpdateCategory;
   version?: string;
-  date: string;
-  image?: string;
+  published_at: string;
+  cover_image_url?: string;
 }
-
-const updates: UpdateItem[] = [
-  {
-    id: 1,
-    title: "Yeni Sezon Başlangıcı - Büyük Güncelleme",
-    category: "update",
-    version: "v2.1.0",
-    date: "23-12",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-  },
-  {
-    id: 2,
-    title: "Kış Etkinliği Başladı! Özel Ödüller Sizi Bekliyor",
-    category: "news",
-    date: "21-12",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-  },
-  {
-    id: 3,
-    title: "Sunucu Bakım Duyurusu",
-    category: "update",
-    version: "v2.0.5",
-    date: "20-12",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-  },
-  {
-    id: 4,
-    title: "Yeni Harita Eklendi: Kayıp Vadi",
-    category: "news",
-    date: "16-12",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-  },
-  {
-    id: 5,
-    title: "Performans İyileştirmeleri ve Hata Düzeltmeleri",
-    category: "update",
-    version: "v2.0.4",
-    date: "10-12",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-  },
-  {
-    id: 6,
-    title: "Topluluk Turnuvası Duyurusu",
-    category: "news",
-    date: "09-12",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-  },
-  {
-    id: 7,
-    title: "Yeni Karakter Sınıfı: Büyücü",
-    category: "update",
-    version: "v2.0.3",
-    date: "05-12",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-  },
-  {
-    id: 8,
-    title: "Hafta Sonu Özel Etkinliği",
-    category: "news",
-    date: "01-12",
-    image: "/lovable-uploads/dd368db9-058d-4606-b265-f0f7a4014bb6.jpg",
-  },
-];
 
 const ITEMS_PER_PAGE = 6;
 
 const Guncellemeler = () => {
   const [activeFilter, setActiveFilter] = useState<Category>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [updates, setUpdates] = useState<UpdateItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUpdates();
+  }, []);
+
+  const fetchUpdates = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("updates")
+        .select("id, title, category, version, published_at, cover_image_url")
+        .eq("is_published", true)
+        .order("published_at", { ascending: false });
+
+      if (error) {
+        console.error("Fetch updates error:", error);
+        return;
+      }
+
+      setUpdates(data || []);
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredUpdates = updates.filter((item) => {
     if (activeFilter === "all") return true;
@@ -99,6 +66,11 @@ const Guncellemeler = () => {
   const handleFilterChange = (filter: Category) => {
     setActiveFilter(filter);
     setCurrentPage(1);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
   };
 
   const filters: { key: Category; label: string }[] = [
@@ -182,154 +154,167 @@ const Guncellemeler = () => {
           </motion.div>
         </div>
 
-        {/* Updates Grid - Larger cards */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <AnimatePresence mode="popLayout">
-            {paginatedUpdates.map((item, index) => (
-              <Link
-                key={item.id}
-                to={`/guncellemeler/${item.id}`}
-                className="block"
-              >
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.4, delay: index * 0.08 }}
-                  className="group relative bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/[0.06] cursor-pointer flex flex-col h-full"
-                  whileHover={{ y: -8, scale: 1.02 }}
-                >
-                  {/* Hover glow effect */}
-                  <motion.div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10"
-                    style={{
-                      background: "radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
-                    }}
-                  />
-                  
-                  {/* Image */}
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : paginatedUpdates.length === 0 ? (
+          <div className="text-center py-24">
+            <p className="text-muted-foreground">Henüz güncelleme bulunmuyor.</p>
+          </div>
+        ) : (
+          <>
+            {/* Updates Grid */}
+            <motion.div
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <AnimatePresence mode="popLayout">
+                {paginatedUpdates.map((item, index) => (
+                  <Link
+                    key={item.id}
+                    to={`/guncellemeler/${item.id}`}
+                    className="block"
+                  >
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.4, delay: index * 0.08 }}
+                      className="group relative bg-[#1a1a1a] rounded-xl overflow-hidden border border-white/[0.06] cursor-pointer flex flex-col h-full"
+                      whileHover={{ y: -8, scale: 1.02 }}
+                    >
+                      {/* Hover glow effect */}
+                      <motion.div 
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10"
+                        style={{
+                          background: "radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-secondary/50 to-secondary/20" />
-                    )}
-                    
-                    {/* Shimmer effect on hover */}
-                    <motion.div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-100"
-                      style={{
-                        background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
-                      }}
-                      animate={{ x: ["-100%", "200%"] }}
-                      transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-                    />
-                    
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
-                    
-                    {/* Version badge - top left (placeholder space if no version) */}
-                    <div className="absolute top-4 left-4 h-7">
-                      {item.version && (
-                        <motion.div 
-                          className="bg-primary/90 text-background text-xs font-bold px-3 py-1.5 rounded-full"
-                          whileHover={{ scale: 1.1 }}
-                        >
-                          {item.version}
-                        </motion.div>
-                      )}
-                    </div>
-
-                    {/* Category badge - top right */}
-                    <div className="absolute top-4 right-4 text-[10px] uppercase tracking-wider px-2.5 py-1 bg-background/80 backdrop-blur-sm text-primary border border-primary/30">
-                      {item.category === "update" ? "Güncelleme" : "Haber"}
-                    </div>
-                  </div>
-
-                  {/* Content - flex-grow to push footer to bottom */}
-                  <div className="p-5 lg:p-6 flex flex-col flex-grow">
-                    {/* Title - Fixed height area */}
-                    <div className="flex-grow min-h-[72px]">
-                      <h3 className="font-display text-xl lg:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 italic leading-tight line-clamp-2">
-                        {item.title}
-                      </h3>
-                    </div>
-
-                    {/* Footer - Always at bottom */}
-                    <div className="flex items-center justify-between pt-4 border-t border-white/[0.06] mt-auto">
-                      <span className="text-primary text-sm font-medium flex items-center gap-2">
-                        Devamını Oku
-                        <motion.svg 
-                          className="w-4 h-4" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                          animate={{ x: [0, 3, 0] }}
-                          transition={{ duration: 1.5, repeat: Infinity }}
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </motion.svg>
-                      </span>
                       
-                      <span className="text-sm text-foreground/40">{item.date}</span>
-                    </div>
-                  </div>
-                </motion.div>
-              </Link>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+                      {/* Image */}
+                      <div className="relative aspect-[4/3] overflow-hidden">
+                        {item.cover_image_url ? (
+                          <img
+                            src={item.cover_image_url}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-secondary/50 to-secondary/20" />
+                        )}
+                        
+                        {/* Shimmer effect on hover */}
+                        <motion.div 
+                          className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                          style={{
+                            background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
+                          }}
+                          animate={{ x: ["-100%", "200%"] }}
+                          transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                        />
+                        
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
+                        
+                        {/* Version badge - top left */}
+                        <div className="absolute top-4 left-4 h-7">
+                          {item.version && (
+                            <motion.div 
+                              className="bg-primary/90 text-background text-xs font-bold px-3 py-1.5 rounded-full"
+                              whileHover={{ scale: 1.1 }}
+                            >
+                              {item.version}
+                            </motion.div>
+                          )}
+                        </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <motion.div
-            className="flex items-center justify-center gap-10 mt-16"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="flex items-center gap-2 text-sm uppercase tracking-wider text-foreground/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Prev
-            </button>
+                        {/* Category badge - top right */}
+                        <div className="absolute top-4 right-4 text-[10px] uppercase tracking-wider px-2.5 py-1 bg-background/80 backdrop-blur-sm text-primary border border-primary/30">
+                          {item.category === "update" ? "Güncelleme" : "Haber"}
+                        </div>
+                      </div>
 
-            <div className="flex items-center gap-3">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      {/* Content */}
+                      <div className="p-5 lg:p-6 flex flex-col flex-grow">
+                        <div className="flex-grow min-h-[72px]">
+                          <h3 className="font-display text-xl lg:text-2xl font-bold text-foreground group-hover:text-primary transition-colors duration-300 italic leading-tight line-clamp-2">
+                            {item.title}
+                          </h3>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t border-white/[0.06] mt-auto">
+                          <span className="text-primary text-sm font-medium flex items-center gap-2">
+                            Devamını Oku
+                            <motion.svg 
+                              className="w-4 h-4" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                              animate={{ x: [0, 3, 0] }}
+                              transition={{ duration: 1.5, repeat: Infinity }}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </motion.svg>
+                          </span>
+                          
+                          <span className="text-sm text-foreground/40">
+                            {item.published_at ? formatDate(item.published_at) : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </Link>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <motion.div
+                className="flex items-center justify-center gap-10 mt-16"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+              >
                 <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`h-2 transition-all duration-300 ${
-                    currentPage === page
-                      ? "bg-primary w-8"
-                      : "bg-foreground/20 w-2 hover:bg-foreground/40"
-                  }`}
-                />
-              ))}
-            </div>
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-2 text-sm uppercase tracking-wider text-foreground/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Prev
+                </button>
 
-            <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="flex items-center gap-2 text-sm uppercase tracking-wider text-foreground/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </motion.div>
+                <div className="flex items-center gap-3">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`h-2 transition-all duration-300 ${
+                        currentPage === page
+                          ? "bg-primary w-8"
+                          : "bg-foreground/20 w-2 hover:bg-foreground/40"
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-2 text-sm uppercase tracking-wider text-foreground/50 hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
+          </>
         )}
       </main>
 

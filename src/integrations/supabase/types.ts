@@ -156,6 +156,51 @@ export type Database = {
         }
         Relationships: []
       }
+      updates: {
+        Row: {
+          author_id: string | null
+          category: string
+          content: Json
+          cover_image_url: string | null
+          created_at: string
+          id: string
+          is_published: boolean
+          published_at: string | null
+          subtitle: string | null
+          title: string
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          category: string
+          content?: Json
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          category?: string
+          content?: Json
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          published_at?: string | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
