@@ -66,7 +66,15 @@ const Hikaye = () => {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
-
+  const fullscreenOverlayRef = useRef<HTMLDivElement>(null);
+  const scrollLockRef = useRef<null | {
+    scrollY: number;
+    htmlOverflow: string;
+    bodyOverflow: string;
+    bodyPosition: string;
+    bodyTop: string;
+    bodyWidth: string;
+  }>(null);
   // Whiteboard viewer hook
   const {
     imageUrl,
@@ -191,15 +199,72 @@ const Hikaye = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen]);
 
-  // Prevent body scroll when fullscreen
+  // Prevent page scroll/bounce when fullscreen
   useEffect(() => {
-    if (isFullscreen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (!isFullscreen) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+
+    const scrollY = window.scrollY;
+
+    scrollLockRef.current = {
+      scrollY,
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+    };
+
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+
     return () => {
-      document.body.style.overflow = '';
+      const prev = scrollLockRef.current;
+      if (!prev) return;
+
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      body.style.position = prev.bodyPosition;
+      body.style.top = prev.bodyTop;
+      body.style.width = prev.bodyWidth;
+
+      window.scrollTo(0, prev.scrollY);
+      scrollLockRef.current = null;
+    };
+  }, [isFullscreen]);
+
+  // In fullscreen, prevent wheel/touchmove from scrolling the page (even over controls)
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const overlay = fullscreenOverlayRef.current;
+    if (!overlay) return;
+
+    const preventWheel = (e: WheelEvent) => {
+      e.preventDefault();
+    };
+
+    const preventTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+    };
+
+    overlay.addEventListener("wheel", preventWheel, {
+      passive: false,
+      capture: true,
+    });
+    overlay.addEventListener("touchmove", preventTouchMove, {
+      passive: false,
+      capture: true,
+    });
+
+    return () => {
+      overlay.removeEventListener("wheel", preventWheel, true);
+      overlay.removeEventListener("touchmove", preventTouchMove, true);
     };
   }, [isFullscreen]);
 
@@ -242,10 +307,11 @@ const Hikaye = () => {
   // Fullscreen Map Component
   const FullscreenMap = () => (
     <motion.div
+      ref={fullscreenOverlayRef}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-background"
+      className="fixed inset-0 z-[100] bg-background overscroll-none touch-none"
     >
       {/* Floating particles in fullscreen too */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -345,7 +411,7 @@ const Hikaye = () => {
       {/* Map content with pan/zoom */}
       <div
         ref={fullscreenContainerRef}
-        className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing"
+        className="absolute inset-0 overflow-hidden overscroll-none touch-none cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
