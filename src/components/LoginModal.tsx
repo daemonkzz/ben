@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoImage from "@/assets/logo.png";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -36,14 +37,50 @@ const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Animated moving glow effects */}
+              <motion.div 
+                className="absolute -top-32 -left-32 w-64 h-64 bg-primary/30 rounded-full blur-[100px] pointer-events-none"
+                animate={{
+                  x: [0, 50, 0],
+                  y: [0, 30, 0],
+                  scale: [1, 1.2, 1],
+                }}
+                transition={{
+                  duration: 8,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              <motion.div 
+                className="absolute -bottom-32 -right-32 w-64 h-64 bg-primary/25 rounded-full blur-[100px] pointer-events-none"
+                animate={{
+                  x: [0, -40, 0],
+                  y: [0, -20, 0],
+                  scale: [1.2, 1, 1.2],
+                }}
+                transition={{
+                  duration: 10,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              <motion.div 
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-primary/15 rounded-full blur-[80px] pointer-events-none"
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.3, 0.6, 0.3],
+                }}
+                transition={{
+                  duration: 6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              
               {/* Background with gradient border effect */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-primary/30 via-primary/10 to-transparent p-[1px]">
                 <div className="h-full w-full rounded-2xl bg-background/95 backdrop-blur-xl" />
               </div>
-              
-              {/* Ambient glow effects */}
-              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-40 h-40 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
               
               {/* Content */}
               <div className="relative px-8 py-10">
@@ -57,19 +94,23 @@ const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
                   <X className="w-5 h-5" />
                 </motion.button>
                 
-                {/* Logo/Title */}
+                {/* Logo */}
                 <div className="text-center mb-8">
-                  <motion.h2 
-                    className="text-3xl font-display font-bold tracking-wider text-foreground mb-3"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                  <motion.div
+                    className="flex justify-center mb-6"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1, type: "spring", damping: 20 }}
                   >
-                    <span className="text-primary">KAZE</span> COMMUNITY
-                  </motion.h2>
+                    <img 
+                      src={logoImage} 
+                      alt="Kaze Community" 
+                      className="w-32 h-32 object-contain drop-shadow-[0_0_30px_hsl(var(--primary)/0.5)]"
+                    />
+                  </motion.div>
                   
                   <motion.div 
-                    className="w-16 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent mx-auto mb-4"
+                    className="w-20 h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent mx-auto mb-5"
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: 1 }}
                     transition={{ delay: 0.2, duration: 0.5 }}
