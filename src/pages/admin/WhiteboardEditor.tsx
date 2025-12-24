@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Excalidraw, convertToExcalidrawElements } from '@excalidraw/excalidraw';
+import { Excalidraw, convertToExcalidrawElements, viewportCoordsToSceneCoords } from '@excalidraw/excalidraw';
 import '@excalidraw/excalidraw/index.css';
 import type { ExcalidrawImperativeAPI, DataURL } from '@excalidraw/excalidraw/types';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -86,19 +86,32 @@ export default function WhiteboardEditor() {
           created: Date.now(),
         }]);
 
-        const viewportCenter = {
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
-        };
+        const appState = excalidrawAPI.getAppState();
+        const sceneCenter = viewportCoordsToSceneCoords(
+          {
+            clientX: appState.offsetLeft + appState.width / 2,
+            clientY: appState.offsetTop + appState.height / 2,
+          },
+          {
+            zoom: appState.zoom,
+            offsetLeft: appState.offsetLeft,
+            offsetTop: appState.offsetTop,
+            scrollX: appState.scrollX,
+            scrollY: appState.scrollY,
+          }
+        );
 
-        const imageElements = convertToExcalidrawElements([{
-          type: 'image',
-          fileId: fileId as any,
-          x: viewportCenter.x - 200 + (i * 50),
-          y: viewportCenter.y - 150 + (i * 50),
-          width: 400,
-          height: 300,
-        }]);
+        const imageElements = convertToExcalidrawElements([
+          {
+            type: 'image',
+            fileId: fileId as any,
+            status: 'saved',
+            x: sceneCenter.x - 200 + i * 50,
+            y: sceneCenter.y - 150 + i * 50,
+            width: 400,
+            height: 300,
+          } as any,
+        ]);
 
         excalidrawAPI.updateScene({
           elements: [...excalidrawAPI.getSceneElements(), ...imageElements],

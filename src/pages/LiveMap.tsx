@@ -18,18 +18,63 @@ interface SceneData {
 // Normalize files: ensure each file has an id field
 const normalizeFiles = (files: BinaryFiles | undefined): BinaryFiles => {
   if (!files || typeof files !== 'object') return {};
-  
+
   const normalized: BinaryFiles = {};
   for (const [key, value] of Object.entries(files)) {
     if (value && typeof value === 'object') {
       normalized[key] = {
         ...value,
         id: (value as any).id || key,
-        mimeType: (value as any).mimeType || ((value as any).dataURL?.match(/^data:([^;,]+)/)?.[1] || 'image/png'),
+        mimeType:
+          (value as any).mimeType ||
+          ((value as any).dataURL?.match(/^data:([^;,]+)/)?.[1] || 'image/png'),
       };
     }
   }
   return normalized;
+};
+
+const DEFAULT_VIEW_BG = '#ffffff';
+
+const normalizeElements = (elements: any[], files: BinaryFiles): any[] => {
+  if (!Array.isArray(elements)) return [];
+
+  return elements.map((el) => {
+    if (!el || typeof el !== 'object') return el;
+
+    if (el.type === 'image') {
+      const fileId = (el as any).fileId;
+      const hasFile = !!fileId && !!(files as any)[fileId];
+
+      // Excalidraw sometimes persists image elements as "pending" even though
+      // file data exists. Force to "saved" so it can render in view mode.
+      if ((el as any).status === 'pending') {
+        return { ...el, status: hasFile ? 'saved' : 'error' };
+      }
+
+      // If we don't have the file payload, mark as error to avoid bounds issues.
+      if (!hasFile && ((el as any).status === 'saved' || (el as any).status == null)) {
+        return { ...el, status: 'error' };
+      }
+    }
+
+    return el;
+  });
+};
+
+const getRenderableElements = (elements: any[], files: BinaryFiles) => {
+  return (elements || []).filter((el) => {
+    if (!el || typeof el !== 'object') return false;
+
+    if (el.type === 'image') {
+      const fileId = (el as any).fileId;
+      const hasFile = !!fileId && !!(files as any)[fileId];
+      const status = (el as any).status;
+      return hasFile && (status === 'saved' || status == null);
+    }
+
+    return true;
+  });
 };
 
 export default function LiveMap() {
@@ -53,12 +98,16 @@ export default function LiveMap() {
       return;
     }
 
-    const elements = sceneData.elements || [];
+    const rawElements = sceneData.elements || [];
     const files = normalizeFiles(sceneData.files);
     const filesArray = Object.values(files);
 
+    const elements = normalizeElements(rawElements, files);
+    const renderableElements = getRenderableElements(elements, files);
+
     console.log('[LiveMap] applyScene:', {
       elementsCount: elements.length,
+      renderableCount: renderableElements.length,
       filesCount: filesArray.length,
       firstElement: elements[0] ? { type: elements[0].type, x: elements[0].x, y: elements[0].y } : null,
     });
@@ -73,15 +122,25 @@ export default function LiveMap() {
       }
     }
 
-    // Step 2: Update scene with elements
+    // Step 2: Update scene with elements + apply persisted viewport/background
     try {
+      // LiveMap is read-only; force a high-contrast background so dark strokes/images are visible.
+      const persistedAppState: Partial<AppState> = {
+        viewBackgroundColor: DEFAULT_VIEW_BG,
+      };
+
+      if (sceneData.appState?.scrollX != null) persistedAppState.scrollX = sceneData.appState.scrollX;
+      if (sceneData.appState?.scrollY != null) persistedAppState.scrollY = sceneData.appState.scrollY;
+      if (sceneData.appState?.zoom != null) persistedAppState.zoom = sceneData.appState.zoom;
+
       api.updateScene({
-        elements: elements,
+        elements,
         appState: {
+          ...persistedAppState,
           viewModeEnabled: true,
           zenModeEnabled: true,
           gridModeEnabled: false,
-        },
+        } as any,
       });
       console.log('[LiveMap] Scene updated with', elements.length, 'elements');
     } catch (err) {
@@ -89,12 +148,15 @@ export default function LiveMap() {
     }
 
     // Step 3: Scroll to content if follow mode is on
-    if (shouldScroll && followMode && elements.length > 0) {
+    if (shouldScroll && followMode && renderableElements.length > 0) {
       setTimeout(() => {
         try {
-          api.scrollToContent(elements, {
+          api.scrollToContent(renderableElements, {
             fitToViewport: true,
             viewportZoomFactor: 0.85,
+            animate: false,
+            minZoom: 0.1,
+            maxZoom: 2,
           });
           console.log('[LiveMap] Scrolled to content');
         } catch (err) {
@@ -112,16 +174,23 @@ export default function LiveMap() {
   // Center camera on content
   const handleCenterCamera = useCallback(() => {
     if (!excalidrawAPI) return;
-    
+
     try {
+      const files = normalizeFiles(excalidrawAPI.getFiles());
       const elements = excalidrawAPI.getSceneElements();
-      if (elements.length === 0) {
+      const renderableElements = getRenderableElements(elements as any[], files);
+
+      if (renderableElements.length === 0) {
         toast.info('Haritada öğe yok');
         return;
       }
-      excalidrawAPI.scrollToContent(elements, {
+
+      excalidrawAPI.scrollToContent(renderableElements as any, {
         fitToViewport: true,
         viewportZoomFactor: 0.85,
+        animate: false,
+        minZoom: 0.1,
+        maxZoom: 2,
       });
       toast.success('Kamera merkeze alındı');
     } catch (err) {
