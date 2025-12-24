@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Send, Loader2, AlertCircle, Lock, KeyRound } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +48,11 @@ const BasvuruForm = () => {
   const [formData, setFormData] = useState<Record<string, string | string[]>>({});
   const particles = useMemo(() => generateFloatingParticles(15), []);
 
+  // Password protection state
+  const [accessCode, setAccessCode] = useState('');
+  const [isCodeVerified, setIsCodeVerified] = useState(false);
+  const [codeError, setCodeError] = useState('');
+
   // Load form template
   useEffect(() => {
     const loadFormTemplate = async () => {
@@ -72,11 +77,17 @@ const BasvuruForm = () => {
             variant: "destructive",
           });
         } else if (data) {
-          setFormTemplate({
+          const template = {
             ...data,
             questions: data.questions as FormQuestion[],
             settings: data.settings as FormSettings
-          });
+          };
+          setFormTemplate(template);
+          
+          // If form is not password protected, mark as verified
+          if (!template.settings?.isPasswordProtected) {
+            setIsCodeVerified(true);
+          }
         }
       } catch (error) {
         console.error('Load error:', error);
@@ -87,6 +98,27 @@ const BasvuruForm = () => {
 
     loadFormTemplate();
   }, [formId, toast]);
+
+  const handleCodeSubmit = () => {
+    if (!formTemplate?.settings?.accessCodes) return;
+    
+    const trimmedCode = accessCode.trim();
+    if (formTemplate.settings.accessCodes.includes(trimmedCode)) {
+      setIsCodeVerified(true);
+      setCodeError('');
+      toast({
+        title: "Erişim Sağlandı",
+        description: "Kod doğrulandı, forma erişebilirsiniz.",
+      });
+    } else {
+      setCodeError('Geçersiz erişim kodu');
+      toast({
+        title: "Hatalı Kod",
+        description: "Girdiğiniz erişim kodu geçersiz.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const updateField = (questionId: string, value: string | string[]) => {
     setFormData(prev => ({
@@ -343,6 +375,136 @@ const BasvuruForm = () => {
             </Link>
           </div>
         </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Password protection screen
+  if (formTemplate.settings?.isPasswordProtected && !isCodeVerified) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
+        {/* Floating Particles */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-[1]">
+          {particles.map((particle) => (
+            <motion.div
+              key={particle.id}
+              className="absolute rounded-full bg-primary/30"
+              style={{
+                width: particle.size,
+                height: particle.size,
+                left: `${particle.x}%`,
+                top: `${particle.y}%`,
+              }}
+              animate={{
+                y: [0, -80, 0],
+                x: [0, Math.random() * 40 - 20, 0],
+                opacity: [0, 0.5, 0],
+                scale: [0.5, 1, 0.5],
+              }}
+              transition={{
+                duration: particle.duration,
+                delay: particle.delay,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Background */}
+        <div className="fixed inset-0 hero-gradient pointer-events-none z-[0]" />
+        <div className="fixed top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-[0]" />
+
+        <Header />
+
+        <main className="flex-1 pt-32 pb-24 relative z-10 flex items-center justify-center">
+          <div className="container mx-auto px-4 md:px-6 max-w-md">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-card/40 border border-border/30 rounded-xl p-8"
+            >
+              {/* Lock Icon */}
+              <div className="flex justify-center mb-6">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-20 h-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center"
+                >
+                  <Lock className="w-10 h-10 text-primary" />
+                </motion.div>
+              </div>
+
+              {/* Title */}
+              <div className="text-center mb-8">
+                <h1 className="text-2xl font-display text-foreground mb-2">
+                  Şifreli Form
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Bu forma erişmek için erişim kodu gereklidir
+                </p>
+                <p className="text-primary font-medium mt-2">{formTemplate.title}</p>
+              </div>
+
+              {/* Code Input */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="access-code" className="text-foreground">
+                    Erişim Kodu
+                  </Label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="access-code"
+                      type="text"
+                      value={accessCode}
+                      onChange={(e) => {
+                        setAccessCode(e.target.value);
+                        setCodeError('');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCodeSubmit();
+                      }}
+                      placeholder="Erişim kodunuzu girin"
+                      className={`bg-card/40 border-border/30 pl-10 ${
+                        codeError ? 'border-destructive' : ''
+                      }`}
+                    />
+                  </div>
+                  {codeError && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-destructive text-sm flex items-center gap-1"
+                    >
+                      <AlertCircle className="w-4 h-4" />
+                      {codeError}
+                    </motion.p>
+                  )}
+                </div>
+
+                <Button
+                  onClick={handleCodeSubmit}
+                  disabled={!accessCode.trim()}
+                  className="w-full gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  Erişim Sağla
+                </Button>
+
+                <Link
+                  to="/basvuru"
+                  className="block text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Başvuru merkezine dön
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        </main>
+
         <Footer />
       </div>
     );
