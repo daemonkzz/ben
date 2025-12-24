@@ -8,9 +8,9 @@ import type { UpdateCategory } from "@/types/update";
 
 // Add your testimonial images here
 const testimonialCards = [
-  { id: 1, image: testimonialBg },
-  { id: 2, image: testimonialBg },
-  { id: 3, image: testimonialBg },
+  { id: 1, image: "https://bbuatycybtwblwyychag.supabase.co/storage/v1/object/public/gallery/1766592076884-gbe4mr.webp" },
+  { id: 2, image: "https://bbuatycybtwblwyychag.supabase.co/storage/v1/object/public/gallery/1766592077583-juxzyc.webp" },
+  { id: 3, image: "https://bbuatycybtwblwyychag.supabase.co/storage/v1/object/public/gallery/1766592076280-ioldz.webp" },
 ];
 
 interface UpdateNote {
