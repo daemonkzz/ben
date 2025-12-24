@@ -1,14 +1,22 @@
 import { useState, useEffect } from "react";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import AnimatedLogo from "@/components/AnimatedLogo";
 import LoginModal from "@/components/LoginModal";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const Header = () => {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, profile, isLoading, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -173,22 +181,84 @@ const Header = () => {
             transition={{ delay: 0.6 }}
           >
             {!isLoading && user ? (
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-foreground/70">
-                  {user.user_metadata?.full_name || user.email?.split('@')[0]}
-                </span>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="text-[11px] px-4 h-8 rounded-sm font-medium"
-                    onClick={signOut}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <motion.button 
+                    className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-foreground/5 transition-colors cursor-pointer border border-transparent hover:border-primary/20"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    <LogOut className="w-3 h-3 mr-1.5" />
-                    Çıkış
-                  </Button>
-                </motion.div>
-              </div>
+                    <Avatar className="h-8 w-8 border-2 border-primary/30 ring-2 ring-primary/10">
+                      <AvatarImage 
+                        src={profile?.avatar_url ? `${profile.avatar_url}?size=64` : undefined} 
+                        alt={profile?.username || 'Kullanıcı'} 
+                      />
+                      <AvatarFallback className="bg-primary/20 text-primary text-xs font-medium">
+                        {(profile?.username || user.email?.[0] || 'U')[0].toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <span className="text-[11px] text-foreground/80 font-medium tracking-wide">
+                      {profile?.username || user.email?.split('@')[0]}
+                    </span>
+                    
+                    <ChevronDown className="w-3 h-3 text-foreground/50" />
+                  </motion.button>
+                </DropdownMenuTrigger>
+                
+                <DropdownMenuContent 
+                  align="end" 
+                  className="w-64 bg-background/95 backdrop-blur-xl border-primary/20 p-0 shadow-xl shadow-primary/5"
+                >
+                  {/* User Info Header */}
+                  <div className="px-4 py-4 border-b border-border/50 bg-gradient-to-br from-primary/5 to-transparent">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-12 w-12 border-2 border-primary/40 ring-2 ring-primary/10">
+                        <AvatarImage 
+                          src={profile?.avatar_url ? `${profile.avatar_url}?size=80` : undefined}
+                          alt={profile?.username || 'Kullanıcı'}
+                        />
+                        <AvatarFallback className="bg-primary/20 text-primary text-sm font-semibold">
+                          {(profile?.username || user.email?.[0] || 'U')[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-foreground truncate">
+                          {profile?.username || user.email?.split('@')[0]}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <svg className="w-3.5 h-3.5 text-[#5865F2]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/>
+                          </svg>
+                          <span className="text-xs text-muted-foreground truncate">
+                            {profile?.username || 'Discord ile bağlandı'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Menu Items */}
+                  <div className="p-2">
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md px-3 py-2.5 focus:bg-primary/10">
+                      <Link to="/profil" className="flex items-center gap-2.5">
+                        <User className="w-4 h-4 text-foreground/70" />
+                        <span className="text-sm">Profilim</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuSeparator className="my-2 bg-border/50" />
+                    
+                    <DropdownMenuItem 
+                      onClick={signOut} 
+                      className="cursor-pointer rounded-md px-3 py-2.5 text-red-400 focus:text-red-400 focus:bg-red-500/10"
+                    >
+                      <LogOut className="w-4 h-4 mr-2.5" />
+                      <span className="text-sm">Çıkış Yap</span>
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button 
@@ -282,16 +352,46 @@ const Header = () => {
               >
                 Harita
               </motion.a>
-              <div className="px-4 pt-2">
+              <div className="px-4 pt-4 border-t border-border/30 mt-2">
                 {!isLoading && user ? (
-                  <div className="flex flex-col gap-2">
-                    <span className="text-sm text-foreground/70 text-center">
-                      {user.user_metadata?.full_name || user.email?.split('@')[0]}
-                    </span>
+                  <div className="flex flex-col gap-3">
+                    {/* Mobile User Info */}
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                      <Avatar className="h-10 w-10 border-2 border-primary/30">
+                        <AvatarImage 
+                          src={profile?.avatar_url ? `${profile.avatar_url}?size=64` : undefined}
+                          alt={profile?.username || 'Kullanıcı'}
+                        />
+                        <AvatarFallback className="bg-primary/20 text-primary text-sm font-medium">
+                          {(profile?.username || user.email?.[0] || 'U')[0].toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-foreground truncate">
+                          {profile?.username || user.email?.split('@')[0]}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <svg className="w-3 h-3 text-[#5865F2]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/>
+                          </svg>
+                          <span className="text-xs text-muted-foreground">Discord</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Link 
+                      to="/profil"
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-md hover:bg-foreground/5 transition-colors text-sm text-foreground/80"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="w-4 h-4" />
+                      Profilim
+                    </Link>
+                    
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="w-full"
+                      className="w-full text-red-400 border-red-400/30 hover:bg-red-500/10 hover:text-red-400"
                       onClick={() => {
                         setIsMenuOpen(false);
                         signOut();

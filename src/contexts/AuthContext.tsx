@@ -2,9 +2,17 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface UserProfile {
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+  discord_id: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: UserProfile | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
 }
@@ -31,9 +39,26 @@ const cleanUrlHash = () => {
   }
 };
 
+// Fetch user profile from database
+const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url, discord_id')
+    .eq('id', userId)
+    .single();
+  
+  if (error) {
+    console.error('Profil yüklenirken hata:', error);
+    return null;
+  }
+  
+  return data;
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -55,10 +80,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           console.log('Oturum Açıldı:', session.user.email);
           // Clean URL hash after OAuth redirect
           cleanUrlHash();
+          // Fetch profile data with setTimeout to avoid deadlock
+          setTimeout(() => {
+            fetchUserProfile(session.user.id).then(setProfile);
+          }, 0);
         }
 
         if (event === 'SIGNED_OUT') {
           console.log('Oturum Kapatıldı');
+          setProfile(null);
         }
       }
     );
@@ -73,6 +103,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.log('Mevcut Oturum:', session.user.email);
         // Clean URL hash if session exists
         cleanUrlHash();
+        // Fetch profile data
+        fetchUserProfile(session.user.id).then(setProfile);
       }
     });
 
@@ -83,10 +115,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setProfile(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, isLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
