@@ -39,7 +39,7 @@ interface ApplicationCardProps {
 interface HistoryItemProps {
   id: number;
   title: string;
-  status: "approved" | "pending" | "rejected";
+  status: "approved" | "pending" | "rejected" | "revision_requested";
   type: string;
   delay?: number;
 }
@@ -231,8 +231,9 @@ const HistoryItem = ({ id, title, status, type, delay = 0 }: HistoryItemProps) =
     approved: { color: "text-primary", label: "Onaylandı", icon: CheckCircle },
     pending: { color: "text-amber-500", label: "Beklemede", icon: Clock },
     rejected: { color: "text-destructive", label: "Reddedildi", icon: XCircle },
+    revision_requested: { color: "text-amber-600", label: "Revizyon Bekleniyor", icon: Edit },
   };
-  const config = statusConfig[status];
+  const config = statusConfig[status] || { color: "text-muted-foreground", label: status, icon: Clock };
   const Icon = config.icon;
 
   return (
@@ -427,7 +428,7 @@ const Basvuru = () => {
     return {
       id: app.id,
       title: template?.title || app.type,
-      status: app.status as "approved" | "pending" | "rejected",
+      status: app.status as "approved" | "pending" | "rejected" | "revision_requested",
       type: app.type,
       delay: 0.5 + index * 0.1
     };
