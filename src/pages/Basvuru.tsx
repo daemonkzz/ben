@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Lock, CheckCircle, Clock, XCircle, FileText } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, CheckCircle, Clock, XCircle, FileText, Edit } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { FormQuestion, FormSettings, FormType } from "@/types/formBuilder";
 
 // Application card types
-type ApplicationStatus = "open" | "closed" | "approved" | "pending" | "rejected" | "locked";
+type ApplicationStatus = "open" | "closed" | "approved" | "pending" | "rejected" | "locked" | "revision_requested";
 
 interface FormTemplate {
   id: string;
@@ -32,6 +32,8 @@ interface ApplicationCardProps {
   coverImage?: string | null;
   rejectionReason?: string | null;
   onReapply?: () => void;
+  revisionCount?: number;
+  onRevisionEdit?: () => void;
 }
 
 interface HistoryItemProps {
@@ -48,6 +50,8 @@ interface UserApplication {
   status: string;
   created_at: string;
   admin_note: string | null;
+  revision_requested_fields: string[] | null;
+  revision_notes: Record<string, string> | null;
 }
 
 // Floating particles generator
@@ -62,7 +66,7 @@ const generateFloatingParticles = (count: number) => {
   }));
 };
 
-const ApplicationCard = ({ title, description, status, formId, featured, delay = 0, coverImage, rejectionReason, onReapply }: ApplicationCardProps) => {
+const ApplicationCard = ({ title, description, status, formId, featured, delay = 0, coverImage, rejectionReason, onReapply, revisionCount, onRevisionEdit }: ApplicationCardProps) => {
   const getStatusContent = () => {
     switch (status) {
       case "open":
@@ -125,6 +129,28 @@ const ApplicationCard = ({ title, description, status, formId, featured, delay =
                 className="w-full py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-md font-medium transition-all duration-300 border border-primary/20 hover:border-primary/40 text-sm tracking-wide"
               >
                 Tekrar Başvur
+              </motion.button>
+            )}
+          </div>
+        );
+      case "revision_requested":
+        return (
+          <div className="space-y-3">
+            <div className="py-3 text-center text-amber-600 text-sm border border-amber-500/20 rounded-md bg-amber-500/5 flex items-center justify-center gap-2">
+              <Edit className="w-4 h-4" />
+              Revizyon bekleniyor
+            </div>
+            {revisionCount !== undefined && revisionCount > 0 && (
+              <p className="text-xs text-muted-foreground text-center">{revisionCount} soru için düzenleme bekleniyor</p>
+            )}
+            {onRevisionEdit && (
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={onRevisionEdit}
+                className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 rounded-md font-medium transition-all duration-300 border border-amber-500/20 hover:border-amber-500/40 text-sm tracking-wide"
+              >
+                Düzenle
               </motion.button>
             )}
           </div>
@@ -288,14 +314,19 @@ const Basvuru = () => {
         // Fetch user's applications
         const { data: applications, error: appError } = await supabase
           .from('applications')
-          .select('id, type, status, created_at, admin_note')
+          .select('id, type, status, created_at, admin_note, revision_requested_fields, revision_notes')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (appError) {
           console.error('Applications fetch error:', appError);
         } else {
-          setUserApplications(applications || []);
+          const typedApplications: UserApplication[] = (applications || []).map(app => ({
+            ...app,
+            revision_requested_fields: app.revision_requested_fields as string[] | null,
+            revision_notes: app.revision_notes as Record<string, string> | null
+          }));
+          setUserApplications(typedApplications);
         }
       } catch (error) {
         console.error('Data fetch error:', error);
@@ -317,6 +348,12 @@ const Basvuru = () => {
     const pendingApp = userApplications.find(a => a.type === formId && a.status === 'pending');
     if (pendingApp) {
       return "pending";
+    }
+
+    // Check if revision is requested
+    const revisionApp = userApplications.find(a => a.type === formId && a.status === 'revision_requested');
+    if (revisionApp) {
+      return "revision_requested";
     }
 
     // Check for approved/rejected status
@@ -577,20 +614,26 @@ const Basvuru = () => {
                     <div className="space-y-3">
                       <h3 className="text-sm font-medium text-primary tracking-wide">Whitelist Başvurusu</h3>
                       <div className="grid sm:grid-cols-2 gap-4">
-                        {whitelistForms.map((template, index) => (
-                          <ApplicationCard
-                            key={template.id}
-                            title={template.title}
-                            description={template.description}
-                            status={getApplicationStatus(template.id, template)}
-                            formId={template.id}
-                            featured={true}
-                            delay={0.1 + index * 0.1}
-                            coverImage={template.cover_image_url}
-                            rejectionReason={userApplications.find(a => a.type === template.id && a.status === 'rejected')?.admin_note}
-                            onReapply={getApplicationStatus(template.id, template) === 'rejected' ? () => navigate(`/basvuru/${template.id}`) : undefined}
-                          />
-                        ))}
+                        {whitelistForms.map((template, index) => {
+                          const appStatus = getApplicationStatus(template.id, template);
+                          const revisionApp = userApplications.find(a => a.type === template.id && a.status === 'revision_requested');
+                          return (
+                            <ApplicationCard
+                              key={template.id}
+                              title={template.title}
+                              description={template.description}
+                              status={appStatus}
+                              formId={template.id}
+                              featured={true}
+                              delay={0.1 + index * 0.1}
+                              coverImage={template.cover_image_url}
+                              rejectionReason={userApplications.find(a => a.type === template.id && a.status === 'rejected')?.admin_note}
+                              onReapply={appStatus === 'rejected' ? () => navigate(`/basvuru/${template.id}`) : undefined}
+                              revisionCount={revisionApp?.revision_requested_fields?.length}
+                              onRevisionEdit={appStatus === 'revision_requested' ? () => navigate(`/basvuru/${template.id}/revision`) : undefined}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -600,20 +643,26 @@ const Basvuru = () => {
                     <div className="space-y-3">
                       <h3 className="text-sm font-medium text-muted-foreground tracking-wide">Diğer Başvurular</h3>
                       <div className="grid sm:grid-cols-2 gap-4">
-                        {otherForms.map((template, index) => (
-                          <ApplicationCard
-                            key={template.id}
-                            title={template.title}
-                            description={template.description}
-                            status={getApplicationStatus(template.id, template)}
-                            formId={template.id}
-                            featured={true}
-                            delay={0.2 + index * 0.1}
-                            coverImage={template.cover_image_url}
-                            rejectionReason={userApplications.find(a => a.type === template.id && a.status === 'rejected')?.admin_note}
-                            onReapply={getApplicationStatus(template.id, template) === 'rejected' ? () => navigate(`/basvuru/${template.id}`) : undefined}
-                          />
-                        ))}
+                        {otherForms.map((template, index) => {
+                          const appStatus = getApplicationStatus(template.id, template);
+                          const revisionApp = userApplications.find(a => a.type === template.id && a.status === 'revision_requested');
+                          return (
+                            <ApplicationCard
+                              key={template.id}
+                              title={template.title}
+                              description={template.description}
+                              status={appStatus}
+                              formId={template.id}
+                              featured={true}
+                              delay={0.2 + index * 0.1}
+                              coverImage={template.cover_image_url}
+                              rejectionReason={userApplications.find(a => a.type === template.id && a.status === 'rejected')?.admin_note}
+                              onReapply={appStatus === 'rejected' ? () => navigate(`/basvuru/${template.id}`) : undefined}
+                              revisionCount={revisionApp?.revision_requested_fields?.length}
+                              onRevisionEdit={appStatus === 'revision_requested' ? () => navigate(`/basvuru/${template.id}/revision`) : undefined}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   )}

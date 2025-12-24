@@ -11,11 +11,15 @@ import {
   User,
   Calendar,
   FileText,
-  MessageSquare
+  MessageSquare,
+  Edit,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 interface ApplicationDetail {
   id: number;
@@ -25,6 +29,9 @@ interface ApplicationDetail {
   status: string;
   created_at: string;
   admin_note: string | null;
+  revision_requested_fields: string[] | null;
+  revision_notes: Record<string, string> | null;
+  content_history: Array<{ timestamp: string; content: Record<string, string> }>;
   profile?: {
     username: string | null;
     discord_id: string | null;
@@ -92,6 +99,11 @@ const AdminBasvuruDetay = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [adminNote, setAdminNote] = useState('');
+  
+  // Revision state
+  const [isRevisionMode, setIsRevisionMode] = useState(false);
+  const [selectedForRevision, setSelectedForRevision] = useState<string[]>([]);
+  const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({});
 
   // Check if user has admin role
   useEffect(() => {
@@ -172,6 +184,9 @@ const AdminBasvuruDetay = () => {
         setApplication({
           ...data,
           content: data.content as Record<string, string>,
+          revision_requested_fields: data.revision_requested_fields as string[] | null,
+          revision_notes: data.revision_notes as Record<string, string> | null,
+          content_history: (data.content_history || []) as Array<{ timestamp: string; content: Record<string, string> }>,
           profile: profile || undefined
         });
         setAdminNote(data.admin_note || '');
@@ -197,7 +212,9 @@ const AdminBasvuruDetay = () => {
         .from('applications')
         .update({ 
           status,
-          admin_note: adminNote || null
+          admin_note: adminNote || null,
+          revision_requested_fields: null,
+          revision_notes: null
         })
         .eq('id', application.id);
 
@@ -217,12 +234,56 @@ const AdminBasvuruDetay = () => {
     }
   };
 
+  const requestRevision = async () => {
+    if (!application || selectedForRevision.length === 0) {
+      toast.error('Lütfen en az bir soru seçin');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('applications')
+        .update({
+          status: 'revision_requested',
+          revision_requested_fields: selectedForRevision,
+          revision_notes: revisionNotes,
+          admin_note: adminNote || null
+        })
+        .eq('id', application.id);
+
+      if (error) {
+        console.error('Revision request error:', error);
+        toast.error('Revizyon isteği gönderilirken hata oluştu');
+        return;
+      }
+
+      toast.success('Revizyon isteği gönderildi');
+      navigate('/admin');
+    } catch (error) {
+      console.error('Revision request error:', error);
+      toast.error('Revizyon isteği gönderilirken hata oluştu');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const toggleRevisionQuestion = (questionKey: string) => {
+    setSelectedForRevision(prev => 
+      prev.includes(questionKey) 
+        ? prev.filter(k => k !== questionKey)
+        : [...prev, questionKey]
+    );
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
         return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Onaylandı</Badge>;
       case 'rejected':
         return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Reddedildi</Badge>;
+      case 'revision_requested':
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Revizyon Bekleniyor</Badge>;
       case 'pending':
       default:
         return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Beklemede</Badge>;
@@ -237,6 +298,18 @@ const AdminBasvuruDetay = () => {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const getOldValue = (questionKey: string): string | null => {
+    if (!application?.content_history || application.content_history.length === 0) return null;
+    const lastHistory = application.content_history[application.content_history.length - 1];
+    return lastHistory?.content?.[questionKey] || null;
+  };
+
+  const hasValueChanged = (questionKey: string): boolean => {
+    const oldValue = getOldValue(questionKey);
+    if (oldValue === null) return false;
+    return oldValue !== application?.content[questionKey];
   };
 
   // Show loading while checking auth
@@ -254,6 +327,8 @@ const AdminBasvuruDetay = () => {
   if (!isAuthorized || !application) {
     return null;
   }
+
+  const canTakeAction = application.status === 'pending' || application.status === 'revision_requested';
 
   return (
     <div className="min-h-screen bg-background">
@@ -329,6 +404,34 @@ const AdminBasvuruDetay = () => {
           </div>
         )}
 
+        {/* Revision Mode Toggle */}
+        {canTakeAction && (
+          <div className="bg-card border border-border rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Edit className="w-5 h-5 text-amber-500" />
+                <div>
+                  <p className="font-medium text-foreground">Revizyon Modu</p>
+                  <p className="text-sm text-muted-foreground">Belirli sorular için düzenleme isteyin</p>
+                </div>
+              </div>
+              <Button
+                variant={isRevisionMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setIsRevisionMode(!isRevisionMode);
+                  if (isRevisionMode) {
+                    setSelectedForRevision([]);
+                    setRevisionNotes({});
+                  }
+                }}
+              >
+                {isRevisionMode ? 'Kapat' : 'Aç'}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Form Content */}
         <div className="bg-card border border-border rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
@@ -336,16 +439,77 @@ const AdminBasvuruDetay = () => {
             Başvuru İçeriği
           </h2>
           <div className="space-y-6">
-            {Object.entries(application.content).map(([key, value]) => (
-              <div key={key} className="border-b border-border/50 pb-4 last:border-0 last:pb-0">
-                <p className="text-sm text-primary font-medium mb-2">
-                  {fieldLabels[key] || key}
-                </p>
-                <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-                  {value || '-'}
-                </p>
-              </div>
-            ))}
+            {Object.entries(application.content).map(([key, value]) => {
+              const oldValue = getOldValue(key);
+              const valueChanged = hasValueChanged(key);
+              const isSelected = selectedForRevision.includes(key);
+
+              return (
+                <div 
+                  key={key} 
+                  className={`border-b border-border/50 pb-4 last:border-0 last:pb-0 p-4 rounded-lg transition-all ${
+                    isSelected ? 'bg-amber-500/10 border-amber-500/30' : ''
+                  } ${valueChanged ? 'bg-emerald-500/5' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-4 mb-2">
+                    <p className="text-sm text-primary font-medium">
+                      {fieldLabels[key] || key}
+                    </p>
+                    {isRevisionMode && (
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`revision-${key}`}
+                          checked={isSelected}
+                          onCheckedChange={() => toggleRevisionQuestion(key)}
+                        />
+                        <Label htmlFor={`revision-${key}`} className="text-xs text-muted-foreground cursor-pointer">
+                          Revizyon İste
+                        </Label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Show old value if it exists and changed */}
+                  {valueChanged && oldValue && (
+                    <div className="mb-2 p-2 bg-muted/50 rounded border border-border/50">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <History className="w-3 h-3" />
+                        Önceki Cevap:
+                      </div>
+                      <p className="text-foreground/60 text-sm line-through whitespace-pre-wrap">
+                        {oldValue}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Current value */}
+                  <div className={valueChanged ? 'p-2 bg-emerald-500/10 rounded border border-emerald-500/20' : ''}>
+                    {valueChanged && (
+                      <div className="flex items-center gap-2 text-xs text-emerald-500 mb-1">
+                        <Check className="w-3 h-3" />
+                        Güncel Cevap:
+                      </div>
+                    )}
+                    <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                      {value || '-'}
+                    </p>
+                  </div>
+
+                  {/* Revision Note Input */}
+                  {isRevisionMode && isSelected && (
+                    <div className="mt-3">
+                      <Label className="text-xs text-amber-500 mb-1 block">Revizyon Notu (isteğe bağlı)</Label>
+                      <Textarea
+                        placeholder="Bu soru için düzenleme notunuz..."
+                        value={revisionNotes[key] || ''}
+                        onChange={(e) => setRevisionNotes({ ...revisionNotes, [key]: e.target.value })}
+                        className="bg-background min-h-[60px] text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -360,45 +524,67 @@ const AdminBasvuruDetay = () => {
             onChange={(e) => setAdminNote(e.target.value)}
             placeholder="Başvuru hakkında not ekleyin (isteğe bağlı)..."
             className="min-h-[100px] bg-background"
-            disabled={application.status !== 'pending'}
+            disabled={!canTakeAction}
           />
         </div>
 
         {/* Action Buttons */}
-        {application.status === 'pending' && (
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button
-              size="lg"
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => updateStatus('approved')}
-              disabled={isUpdating}
-            >
-              {isUpdating ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              ) : (
-                <Check className="w-5 h-5 mr-2" />
-              )}
-              Başvuruyu Onayla
-            </Button>
-            <Button
-              size="lg"
-              variant="destructive"
-              className="flex-1"
-              onClick={() => updateStatus('rejected')}
-              disabled={isUpdating}
-            >
-              {isUpdating ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              ) : (
-                <X className="w-5 h-5 mr-2" />
-              )}
-              Başvuruyu Reddet
-            </Button>
+        {canTakeAction && (
+          <div className="space-y-4">
+            {/* Revision Request Button */}
+            {isRevisionMode && selectedForRevision.length > 0 && (
+              <Button
+                size="lg"
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={requestRevision}
+                disabled={isUpdating}
+              >
+                {isUpdating ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Edit className="w-5 h-5 mr-2" />
+                )}
+                Revizyon İste ({selectedForRevision.length} soru)
+              </Button>
+            )}
+
+            {/* Approve / Reject Buttons */}
+            {!isRevisionMode && (
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
+                  size="lg"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => updateStatus('approved')}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : (
+                    <Check className="w-5 h-5 mr-2" />
+                  )}
+                  Başvuruyu Onayla
+                </Button>
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => updateStatus('rejected')}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? (
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  ) : (
+                    <X className="w-5 h-5 mr-2" />
+                  )}
+                  Başvuruyu Reddet
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Already processed message */}
-        {application.status !== 'pending' && (
+        {!canTakeAction && (
           <div className={`p-4 rounded-lg text-center ${
             application.status === 'approved' 
               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 

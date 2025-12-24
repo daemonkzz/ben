@@ -13,6 +13,7 @@ import GuncellemeDetay from "./pages/GuncellemeDetay";
 import Hikaye from "./pages/Hikaye";
 import Basvuru from "./pages/Basvuru";
 import BasvuruForm from "./pages/BasvuruForm";
+import BasvuruRevision from "./pages/BasvuruRevision";
 import Admin from "./pages/Admin";
 import AdminBasvuruDetay from "./pages/AdminBasvuruDetay";
 import FormBuilder from "./pages/admin/FormBuilder";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/hikaye" element={<Hikaye />} />
             <Route path="/basvuru" element={<Basvuru />} />
             <Route path="/basvuru/:formId" element={<BasvuruForm />} />
+            <Route path="/basvuru/:formId/revision" element={<BasvuruRevision />} />
             
             {/* Admin Routes - Protected with 2FA */}
             <Route path="/admin/*" element={

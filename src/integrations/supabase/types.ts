@@ -89,8 +89,11 @@ export type Database = {
         Row: {
           admin_note: string | null
           content: Json
+          content_history: Json | null
           created_at: string
           id: number
+          revision_notes: Json | null
+          revision_requested_fields: Json | null
           status: string | null
           type: string
           user_id: string
@@ -98,8 +101,11 @@ export type Database = {
         Insert: {
           admin_note?: string | null
           content: Json
+          content_history?: Json | null
           created_at?: string
           id?: number
+          revision_notes?: Json | null
+          revision_requested_fields?: Json | null
           status?: string | null
           type: string
           user_id: string
@@ -107,8 +113,11 @@ export type Database = {
         Update: {
           admin_note?: string | null
           content?: Json
+          content_history?: Json | null
           created_at?: string
           id?: number
+          revision_notes?: Json | null
+          revision_requested_fields?: Json | null
           status?: string | null
           type?: string
           user_id?: string
