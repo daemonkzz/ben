@@ -78,6 +78,7 @@ const BasvuruRevision = () => {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [formTemplate, setFormTemplate] = useState<FormTemplate | null>(null);
   const [application, setApplication] = useState<Application | null>(null);
@@ -229,6 +230,7 @@ const BasvuruRevision = () => {
         throw error;
       }
 
+      setIsSubmitted(true);
       toast({
         title: "Revizyon Gönderildi",
         description: "Başvurunuz tekrar incelemeye alınacaktır.",
@@ -241,7 +243,6 @@ const BasvuruRevision = () => {
         description: "Revizyon gönderilirken bir hata oluştu.",
         variant: "destructive",
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -530,7 +531,7 @@ const BasvuruRevision = () => {
           >
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isSubmitted}
               size="lg"
               className="w-full gap-2 bg-amber-600 hover:bg-amber-700"
             >
@@ -538,6 +539,11 @@ const BasvuruRevision = () => {
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   Gönderiliyor...
+                </>
+              ) : isSubmitted ? (
+                <>
+                  <Send className="w-5 h-5" />
+                  Gönderildi
                 </>
               ) : (
                 <>
