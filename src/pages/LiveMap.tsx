@@ -143,10 +143,20 @@ export default function LiveMap() {
               <p className="text-muted-foreground">Harita yükleniyor...</p>
             </div>
           </div>
+        ) : import.meta.env.PROD && !import.meta.env.VITE_TLDRAW_LICENSE_KEY ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-background">
+            <div className="text-center p-8 max-w-md">
+              <h2 className="text-xl font-bold text-destructive mb-4">Harita Geçici Olarak Kullanılamıyor</h2>
+              <p className="text-muted-foreground">
+                Lütfen daha sonra tekrar deneyin veya site yöneticisiyle iletişime geçin.
+              </p>
+            </div>
+          </div>
         ) : (
           <Tldraw
             onMount={handleEditorMount}
             hideUi
+            licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
           />
         )}
       </div>

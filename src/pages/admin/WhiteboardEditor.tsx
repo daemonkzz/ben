@@ -442,10 +442,24 @@ export default function WhiteboardEditor() {
             <div className="absolute inset-0 flex items-center justify-center bg-background">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
+          ) : import.meta.env.PROD && !import.meta.env.VITE_TLDRAW_LICENSE_KEY ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-background">
+              <div className="text-center p-8 max-w-md">
+                <h2 className="text-xl font-bold text-destructive mb-4">Tldraw Lisansı Gerekli</h2>
+                <p className="text-muted-foreground mb-4">
+                  Production ortamında tldraw kullanmak için lisans anahtarı gereklidir. 
+                  Lütfen Lovable proje ayarlarından <code className="bg-muted px-1 rounded">VITE_TLDRAW_LICENSE_KEY</code> environment variable'ını ekleyin.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Lisans için: <a href="https://tldraw.dev" target="_blank" rel="noopener noreferrer" className="text-primary underline">tldraw.dev</a>
+                </p>
+              </div>
+            </div>
           ) : (
             <Tldraw
               onMount={handleEditorMount}
               assets={assetStore}
+              licenseKey={import.meta.env.VITE_TLDRAW_LICENSE_KEY}
             />
           )}
         </div>
