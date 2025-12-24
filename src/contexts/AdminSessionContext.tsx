@@ -7,6 +7,8 @@ import { verifyTOTP } from '@epic-web/totp';
 import type { Admin2FASettings } from '@/types/admin2fa';
 
 const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+const SESSION_KEY = 'admin_2fa_session';
+const SESSION_EXPIRY_KEY = 'admin_2fa_session_expiry';
 
 interface AdminSessionContextType {
   isAdminAuthenticated: boolean;
@@ -28,6 +30,51 @@ export const useAdminSession = () => {
   return context;
 };
 
+// Check if session is valid from storage
+const getStoredSession = (userId: string): boolean => {
+  try {
+    const storedUserId = sessionStorage.getItem(SESSION_KEY);
+    const expiryStr = sessionStorage.getItem(SESSION_EXPIRY_KEY);
+    
+    if (!storedUserId || !expiryStr || storedUserId !== userId) {
+      return false;
+    }
+    
+    const expiry = parseInt(expiryStr, 10);
+    if (Date.now() > expiry) {
+      // Session expired, clear it
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(SESSION_EXPIRY_KEY);
+      return false;
+    }
+    
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Save session to storage
+const saveSession = (userId: string) => {
+  try {
+    const expiry = Date.now() + IDLE_TIMEOUT;
+    sessionStorage.setItem(SESSION_KEY, userId);
+    sessionStorage.setItem(SESSION_EXPIRY_KEY, expiry.toString());
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+// Clear session from storage
+const clearSession = () => {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_EXPIRY_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,6 +83,19 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [isLoading, setIsLoading] = useState(true);
   const [admin2FASettings, setAdmin2FASettings] = useState<Admin2FASettings | null>(null);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
+
+  // Check stored session on mount and when user changes
+  useEffect(() => {
+    if (user) {
+      const hasValidSession = getStoredSession(user.id);
+      if (hasValidSession) {
+        setIsAdminAuthenticated(true);
+      }
+    } else {
+      setIsAdminAuthenticated(false);
+      clearSession();
+    }
+  }, [user]);
 
   // Fetch user's 2FA settings
   const fetch2FASettings = useCallback(async () => {
@@ -72,6 +132,7 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const lockSession = useCallback(() => {
     if (location.pathname !== '/admin/locked' && location.pathname.startsWith('/admin')) {
       setIsAdminAuthenticated(false);
+      clearSession();
       navigate('/admin/locked', { state: { from: location.pathname } });
     }
   }, [navigate, location.pathname]);
@@ -91,19 +152,25 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     disabled: !isAdminAuthenticated || !location.pathname.startsWith('/admin') || location.pathname === '/admin/locked',
   });
 
-  // Update remaining time periodically
+  // Update remaining time periodically and refresh session expiry
   useEffect(() => {
-    if (!isAdminAuthenticated) {
+    if (!isAdminAuthenticated || !user) {
       setRemainingTime(null);
       return;
     }
 
     const interval = setInterval(() => {
-      setRemainingTime(Math.ceil(getRemainingTime() / 1000));
+      const remaining = Math.ceil(getRemainingTime() / 1000);
+      setRemainingTime(remaining);
+      
+      // Refresh session expiry in storage (keep it in sync with idle timer)
+      if (remaining > 0) {
+        saveSession(user.id);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isAdminAuthenticated, getRemainingTime]);
+  }, [isAdminAuthenticated, getRemainingTime, user]);
 
   // Verify 2FA code
   const verify2FA = useCallback(async (code: string): Promise<{ success: boolean; error?: string }> => {
@@ -131,6 +198,7 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           .eq('user_id', user.id);
 
         setIsAdminAuthenticated(true);
+        saveSession(user.id);
         return { success: true };
       } else {
         // Increment failed attempts

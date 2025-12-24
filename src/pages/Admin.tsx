@@ -48,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SessionTimeoutIndicator } from '@/components/admin/SessionTimeoutIndicator';
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 import type { UpdateData } from '@/types/update';
 
@@ -504,6 +505,9 @@ const Admin = () => {
               <h1 className="font-bold text-lg text-foreground">Admin Panel</h1>
               <p className="text-xs text-muted-foreground">Yönetim Paneli</p>
             </div>
+          </div>
+          <div className="mt-4">
+            <SessionTimeoutIndicator />
           </div>
         </div>
 
