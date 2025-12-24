@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X, LogOut, User, ChevronDown } from "lucide-react";
+import { Menu, X, LogOut, User, ChevronDown, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -181,7 +181,7 @@ const Header = () => {
             transition={{ delay: 0.6 }}
           >
             {!isLoading && user ? (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <motion.button 
                     className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-foreground/5 transition-colors cursor-pointer border border-transparent hover:border-primary/20"
@@ -244,6 +244,13 @@ const Header = () => {
                       <Link to="/profil" className="flex items-center gap-2.5">
                         <User className="w-4 h-4 text-foreground/70" />
                         <span className="text-sm">Profilim</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem asChild className="cursor-pointer rounded-md px-3 py-2.5 focus:bg-primary/10">
+                      <Link to="/basvuru" className="flex items-center gap-2.5">
+                        <FileText className="w-4 h-4 text-foreground/70" />
+                        <span className="text-sm">Başvuru Merkezi</span>
                       </Link>
                     </DropdownMenuItem>
                     
@@ -386,6 +393,15 @@ const Header = () => {
                     >
                       <User className="w-4 h-4" />
                       Profilim
+                    </Link>
+                    
+                    <Link 
+                      to="/basvuru"
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-md hover:bg-foreground/5 transition-colors text-sm text-foreground/80"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <FileText className="w-4 h-4" />
+                      Başvuru Merkezi
                     </Link>
                     
                     <Button 
