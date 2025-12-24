@@ -1,29 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Input } from "@/components/ui/input";
-
-interface Rule {
-  id: string;
-  title: string;
-  description: string;
-  lastUpdate?: string;
-}
-
-interface SubCategory {
-  id: string;
-  title: string;
-  description?: string;
-  rules: Rule[];
-}
-
-interface MainCategory {
-  id: string;
-  title: string;
-  subCategories: SubCategory[];
-}
+import { supabase } from "@/integrations/supabase/client";
+import type { MainCategory, SubCategory, Rule } from "@/types/rules";
 
 const rulesData: MainCategory[] = [
   {
@@ -490,7 +472,29 @@ const Kurallar = () => {
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["1"]);
   const [expandedSubCategories, setExpandedSubCategories] = useState<string[]>(["1.1"]);
   const [activeRule, setActiveRule] = useState<string | null>(null);
+  const [rulesFromDb, setRulesFromDb] = useState<MainCategory[] | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // Fetch rules from database
+  useEffect(() => {
+    const fetchRules = async () => {
+      const { data, error } = await supabase
+        .from('rules')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data && Array.isArray(data.data) && data.data.length > 0) {
+        setRulesFromDb(data.data as MainCategory[]);
+        setLastUpdated(data.updated_at);
+      }
+    };
+    fetchRules();
+  }, []);
+
+  // Use database rules if available, otherwise fallback to static data
+  const currentRulesData = rulesFromDb || rulesData;
 
   const toggleCategory = (id: string) => {
     setExpandedCategories((prev) =>
@@ -518,11 +522,11 @@ const Kurallar = () => {
 
   // Filter rules based on search query
   const filteredData = useMemo(() => {
-    if (!searchQuery.trim()) return rulesData;
+    if (!searchQuery.trim()) return currentRulesData;
 
     const query = searchQuery.toLowerCase();
     
-    return rulesData
+    return currentRulesData
       .map((category) => ({
         ...category,
         subCategories: category.subCategories
@@ -537,7 +541,7 @@ const Kurallar = () => {
           .filter((subCat) => subCat.rules.length > 0),
       }))
       .filter((category) => category.subCategories.length > 0);
-  }, [searchQuery]);
+  }, [searchQuery, currentRulesData]);
 
   // Auto-expand categories when searching
   useEffect(() => {
