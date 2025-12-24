@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { MainCategory, SubCategory, Rule } from '@/types/rules';
 
-// Default rules data to import
+// Default rules data to import (no lastUpdate - will be set when edited)
 const defaultRulesData: MainCategory[] = [
   {
     id: "1",
@@ -53,10 +53,10 @@ const defaultRulesData: MainCategory[] = [
         title: "Davranış Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "1.1.1", title: "Saygılı Davranış", description: "Tüm oyunculara saygılı davranılmalıdır. Herhangi bir oyuncuya karşı ayrımcılık, nefret söylemi veya kışkırtıcı davranışlarda bulunmak kesinlikle yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "1.1.2", title: "Küfür ve Hakaret", description: "Küfür, hakaret ve aşağılayıcı söylemler yasaktır. Bu kural hem oyun içi hem de Discord sunucusunda geçerlidir.", lastUpdate: "24.12.2025" },
-          { id: "1.1.3", title: "Spam Yasağı", description: "Spam yapmak ve gereksiz mesajlar göndermek yasaktır. Tekrarlayan mesajlar, flood ve benzeri davranışlar cezalandırılır.", lastUpdate: "24.12.2025" },
-          { id: "1.1.4", title: "Taciz Yasağı", description: "Oyun içi ve dışı her türlü taciz yasaktır. Bu durum tespit edildiğinde kalıcı ban ile sonuçlanabilir.", lastUpdate: "24.12.2025" },
+          { id: "1.1.1", title: "Saygılı Davranış", description: "Tüm oyunculara saygılı davranılmalıdır. Herhangi bir oyuncuya karşı ayrımcılık, nefret söylemi veya kışkırtıcı davranışlarda bulunmak kesinlikle yasaktır.", lastUpdate: "" },
+          { id: "1.1.2", title: "Küfür ve Hakaret", description: "Küfür, hakaret ve aşağılayıcı söylemler yasaktır. Bu kural hem oyun içi hem de Discord sunucusunda geçerlidir.", lastUpdate: "" },
+          { id: "1.1.3", title: "Spam Yasağı", description: "Spam yapmak ve gereksiz mesajlar göndermek yasaktır. Tekrarlayan mesajlar, flood ve benzeri davranışlar cezalandırılır.", lastUpdate: "" },
+          { id: "1.1.4", title: "Taciz Yasağı", description: "Oyun içi ve dışı her türlü taciz yasaktır. Bu durum tespit edildiğinde kalıcı ban ile sonuçlanabilir.", lastUpdate: "" },
         ],
       },
       {
@@ -64,9 +64,9 @@ const defaultRulesData: MainCategory[] = [
         title: "Yetki Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "1.2.1", title: "Yetkililerin Kararları", description: "Yetkililerin kararlarına saygı gösterilmelidir. Yetkililer sunucunun düzenini sağlamak için çalışmaktadır ve kararları nihaidir.", lastUpdate: "24.12.2025" },
-          { id: "1.2.2", title: "İtiraz Yöntemi", description: "Yetkililerle tartışmak yerine ticket açılmalıdır. Oyun içinde yetkililere karşı çıkmak veya kararlarını sorgulamak yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "1.2.3", title: "Karar İtirazları", description: "Yetkili kararlarına itiraz Discord üzerinden yapılır. İtirazlarınızı kanıtlarla destekleyerek ticket sistemi üzerinden iletebilirsiniz.", lastUpdate: "24.12.2025" },
+          { id: "1.2.1", title: "Yetkililerin Kararları", description: "Yetkililerin kararlarına saygı gösterilmelidir. Yetkililer sunucunun düzenini sağlamak için çalışmaktadır ve kararları nihaidir.", lastUpdate: "" },
+          { id: "1.2.2", title: "İtiraz Yöntemi", description: "Yetkililerle tartışmak yerine ticket açılmalıdır. Oyun içinde yetkililere karşı çıkmak veya kararlarını sorgulamak yasaktır.", lastUpdate: "" },
+          { id: "1.2.3", title: "Karar İtirazları", description: "Yetkili kararlarına itiraz Discord üzerinden yapılır. İtirazlarınızı kanıtlarla destekleyerek ticket sistemi üzerinden iletebilirsiniz.", lastUpdate: "" },
         ],
       },
     ],
@@ -80,10 +80,10 @@ const defaultRulesData: MainCategory[] = [
         title: "Temel RP Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "2.1.1", title: "Karakter Kalıcılığı", description: "Her zaman karakterinizde kalmalısınız (IC). Oyun içinde OOC konuşmalar minimum düzeyde tutulmalı.", lastUpdate: "24.12.2025" },
-          { id: "2.1.2", title: "OOC İletişim", description: "OOC konuşmalar için belirlenen kanalları kullanın. Oyun içinde OOC bilgi paylaşımı yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "2.1.3", title: "Powergaming Yasağı", description: "Powergaming yasaktır - karşı tarafa tepki verme şansı tanıyın.", lastUpdate: "24.12.2025" },
-          { id: "2.1.4", title: "Metagaming Yasağı", description: "Metagaming yasaktır - IC bilmediğiniz bilgileri kullanmayın.", lastUpdate: "24.12.2025" },
+          { id: "2.1.1", title: "Karakter Kalıcılığı", description: "Her zaman karakterinizde kalmalısınız (IC). Oyun içinde OOC konuşmalar minimum düzeyde tutulmalı.", lastUpdate: "" },
+          { id: "2.1.2", title: "OOC İletişim", description: "OOC konuşmalar için belirlenen kanalları kullanın. Oyun içinde OOC bilgi paylaşımı yasaktır.", lastUpdate: "" },
+          { id: "2.1.3", title: "Powergaming Yasağı", description: "Powergaming yasaktır - karşı tarafa tepki verme şansı tanıyın.", lastUpdate: "" },
+          { id: "2.1.4", title: "Metagaming Yasağı", description: "Metagaming yasaktır - IC bilmediğiniz bilgileri kullanmayın.", lastUpdate: "" },
         ],
       },
       {
@@ -91,10 +91,10 @@ const defaultRulesData: MainCategory[] = [
         title: "Saldırı Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "2.2.1", title: "RDM Yasağı", description: "Random Deathmatch (RDM) kesinlikle yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "2.2.2", title: "VDM Yasağı", description: "Vehicle Deathmatch (VDM) kesinlikle yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "2.2.3", title: "Combat Logging Yasağı", description: "Combat logging yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "2.2.4", title: "Revenge Kill Yasağı", description: "Revenge Kill yasaktır.", lastUpdate: "24.12.2025" },
+          { id: "2.2.1", title: "RDM Yasağı", description: "Random Deathmatch (RDM) kesinlikle yasaktır.", lastUpdate: "" },
+          { id: "2.2.2", title: "VDM Yasağı", description: "Vehicle Deathmatch (VDM) kesinlikle yasaktır.", lastUpdate: "" },
+          { id: "2.2.3", title: "Combat Logging Yasağı", description: "Combat logging yasaktır.", lastUpdate: "" },
+          { id: "2.2.4", title: "Revenge Kill Yasağı", description: "Revenge Kill yasaktır.", lastUpdate: "" },
         ],
       },
       {
@@ -102,11 +102,11 @@ const defaultRulesData: MainCategory[] = [
         title: "Karakter Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "2.3.1", title: "Gerçekçi Geçmiş", description: "Karakteriniz gerçekçi bir geçmişe sahip olmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "2.3.2", title: "İsim Kuralları", description: "Ünlü kişilerin isimlerini kullanamazsınız.", lastUpdate: "24.12.2025" },
-          { id: "2.3.3", title: "Yaş Sınırı", description: "Karakterinizin yaşı 18'den büyük olmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "2.3.4", title: "Fear RP Kuralı", description: "Fear RP kuralına uymalısınız.", lastUpdate: "24.12.2025" },
-          { id: "2.3.5", title: "New Life Rule (NLR)", description: "Öldükten sonra önceki olayları hatırlayamazsınız.", lastUpdate: "24.12.2025" },
+          { id: "2.3.1", title: "Gerçekçi Geçmiş", description: "Karakteriniz gerçekçi bir geçmişe sahip olmalıdır.", lastUpdate: "" },
+          { id: "2.3.2", title: "İsim Kuralları", description: "Ünlü kişilerin isimlerini kullanamazsınız.", lastUpdate: "" },
+          { id: "2.3.3", title: "Yaş Sınırı", description: "Karakterinizin yaşı 18'den büyük olmalıdır.", lastUpdate: "" },
+          { id: "2.3.4", title: "Fear RP Kuralı", description: "Fear RP kuralına uymalısınız.", lastUpdate: "" },
+          { id: "2.3.5", title: "New Life Rule (NLR)", description: "Öldükten sonra önceki olayları hatırlayamazsınız.", lastUpdate: "" },
         ],
       },
     ],
@@ -120,10 +120,10 @@ const defaultRulesData: MainCategory[] = [
         title: "Soygun Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "3.1.1", title: "Banka Soygunu", description: "Banka soygunu için minimum 4 polis online olmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "3.1.2", title: "Mücevherat Soygunu", description: "Mücevherat soygunu için minimum 3 polis online olmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "3.1.3", title: "Market Soygunu", description: "Market soygunu için minimum 2 polis online olmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "3.1.4", title: "Soygun Aralığı", description: "Ardışık soygunlar arasında en az 30 dakika beklenmelidir.", lastUpdate: "24.12.2025" },
+          { id: "3.1.1", title: "Banka Soygunu", description: "Banka soygunu için minimum 4 polis online olmalıdır.", lastUpdate: "" },
+          { id: "3.1.2", title: "Mücevherat Soygunu", description: "Mücevherat soygunu için minimum 3 polis online olmalıdır.", lastUpdate: "" },
+          { id: "3.1.3", title: "Market Soygunu", description: "Market soygunu için minimum 2 polis online olmalıdır.", lastUpdate: "" },
+          { id: "3.1.4", title: "Soygun Aralığı", description: "Ardışık soygunlar arasında en az 30 dakika beklenmelidir.", lastUpdate: "" },
         ],
       },
       {
@@ -131,9 +131,9 @@ const defaultRulesData: MainCategory[] = [
         title: "Rehine Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "3.2.1", title: "Rehine Süresi", description: "Rehine alma süresi maksimum 30 dakikadır.", lastUpdate: "24.12.2025" },
-          { id: "3.2.2", title: "Çete Üyesi Yasağı", description: "Rehine olarak kendi çete üyelerinizi kullanamazsınız.", lastUpdate: "24.12.2025" },
-          { id: "3.2.3", title: "Rehine Hakları", description: "Rehinenin gerçekçi talepleri karşılanmalıdır.", lastUpdate: "24.12.2025" },
+          { id: "3.2.1", title: "Rehine Süresi", description: "Rehine alma süresi maksimum 30 dakikadır.", lastUpdate: "" },
+          { id: "3.2.2", title: "Çete Üyesi Yasağı", description: "Rehine olarak kendi çete üyelerinizi kullanamazsınız.", lastUpdate: "" },
+          { id: "3.2.3", title: "Rehine Hakları", description: "Rehinenin gerçekçi talepleri karşılanmalıdır.", lastUpdate: "" },
         ],
       },
       {
@@ -141,11 +141,11 @@ const defaultRulesData: MainCategory[] = [
         title: "Çete Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "3.3.1", title: "Cop Baiting Yasağı", description: "Cop baiting yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "3.3.2", title: "Güvenli Bölgeler", description: "Güvenli bölgelerde suç işlenemez.", lastUpdate: "24.12.2025" },
-          { id: "3.3.3", title: "Gang Savaşları", description: "Gang savaşları için yetki alınmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "3.3.4", title: "Silah Kullanımı", description: "Silah kullanımı öncesi RP yapılmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "3.3.5", title: "Üye Limiti", description: "Çete üye sayısı maksimum 15 kişidir.", lastUpdate: "24.12.2025" },
+          { id: "3.3.1", title: "Cop Baiting Yasağı", description: "Cop baiting yasaktır.", lastUpdate: "" },
+          { id: "3.3.2", title: "Güvenli Bölgeler", description: "Güvenli bölgelerde suç işlenemez.", lastUpdate: "" },
+          { id: "3.3.3", title: "Gang Savaşları", description: "Gang savaşları için yetki alınmalıdır.", lastUpdate: "" },
+          { id: "3.3.4", title: "Silah Kullanımı", description: "Silah kullanımı öncesi RP yapılmalıdır.", lastUpdate: "" },
+          { id: "3.3.5", title: "Üye Limiti", description: "Çete üye sayısı maksimum 15 kişidir.", lastUpdate: "" },
         ],
       },
     ],
@@ -159,10 +159,10 @@ const defaultRulesData: MainCategory[] = [
         title: "Sürüş Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "4.1.1", title: "Trafik Kuralları", description: "Trafik kurallarına uyulmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "4.1.2", title: "Araç Parkı", description: "Araç parkı belirlenen yerlere yapılmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "4.1.3", title: "Kasıtlı Kaza", description: "Araçları kasıtlı olarak kaza yaptırmak yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "4.1.4", title: "Kaldırım Yasağı", description: "Kaldırımda araç kullanmak yasaktır.", lastUpdate: "24.12.2025" },
+          { id: "4.1.1", title: "Trafik Kuralları", description: "Trafik kurallarına uyulmalıdır.", lastUpdate: "" },
+          { id: "4.1.2", title: "Araç Parkı", description: "Araç parkı belirlenen yerlere yapılmalıdır.", lastUpdate: "" },
+          { id: "4.1.3", title: "Kasıtlı Kaza", description: "Araçları kasıtlı olarak kaza yaptırmak yasaktır.", lastUpdate: "" },
+          { id: "4.1.4", title: "Kaldırım Yasağı", description: "Kaldırımda araç kullanmak yasaktır.", lastUpdate: "" },
         ],
       },
       {
@@ -170,10 +170,10 @@ const defaultRulesData: MainCategory[] = [
         title: "Araç Kullanım Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "4.2.1", title: "Uçan Araçlar", description: "Uçan araçlar için özel izin gereklidir.", lastUpdate: "24.12.2025" },
-          { id: "4.2.2", title: "Araç Modifikasyonu", description: "Araç modifikasyonları karakter bütçesine uygun olmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "4.2.3", title: "Çalıntı Araçlar", description: "Çalıntı araçlar 2 saat içinde terk edilmelidir.", lastUpdate: "24.12.2025" },
-          { id: "4.2.4", title: "Süper Araçlar", description: "Süper araçlar sadece whitelisted oyunculara açıktır.", lastUpdate: "24.12.2025" },
+          { id: "4.2.1", title: "Uçan Araçlar", description: "Uçan araçlar için özel izin gereklidir.", lastUpdate: "" },
+          { id: "4.2.2", title: "Araç Modifikasyonu", description: "Araç modifikasyonları karakter bütçesine uygun olmalıdır.", lastUpdate: "" },
+          { id: "4.2.3", title: "Çalıntı Araçlar", description: "Çalıntı araçlar 2 saat içinde terk edilmelidir.", lastUpdate: "" },
+          { id: "4.2.4", title: "Süper Araçlar", description: "Süper araçlar sadece whitelisted oyunculara açıktır.", lastUpdate: "" },
         ],
       },
     ],
@@ -187,11 +187,11 @@ const defaultRulesData: MainCategory[] = [
         title: "İletişim Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "5.1.1", title: "Mikrofon Kullanımı", description: "Oyun içi iletişim için mikrofon kullanılmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "5.1.2", title: "Push-to-Talk", description: "Push-to-talk önerilir.", lastUpdate: "24.12.2025" },
-          { id: "5.1.3", title: "Telsiz Mesafesi", description: "Telsiz mesafesi kurallarına uyulmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "5.1.4", title: "Discord Voice", description: "Discord voice chat sadece OOC iletişim içindir.", lastUpdate: "24.12.2025" },
-          { id: "5.1.5", title: "Telefon Görüşmeleri", description: "Karakterler arası telefon görüşmeleri IC olarak yapılmalıdır.", lastUpdate: "24.12.2025" },
+          { id: "5.1.1", title: "Mikrofon Kullanımı", description: "Oyun içi iletişim için mikrofon kullanılmalıdır.", lastUpdate: "" },
+          { id: "5.1.2", title: "Push-to-Talk", description: "Push-to-talk önerilir.", lastUpdate: "" },
+          { id: "5.1.3", title: "Telsiz Mesafesi", description: "Telsiz mesafesi kurallarına uyulmalıdır.", lastUpdate: "" },
+          { id: "5.1.4", title: "Discord Voice", description: "Discord voice chat sadece OOC iletişim içindir.", lastUpdate: "" },
+          { id: "5.1.5", title: "Telefon Görüşmeleri", description: "Karakterler arası telefon görüşmeleri IC olarak yapılmalıdır.", lastUpdate: "" },
         ],
       },
       {
@@ -199,11 +199,11 @@ const defaultRulesData: MainCategory[] = [
         title: "Ekonomi Kuralları",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "5.2.1", title: "Para Transferleri", description: "Para transferleri kayıt altına alınır.", lastUpdate: "24.12.2025" },
-          { id: "5.2.2", title: "Gerçek Para Yasağı", description: "Gerçek para ile oyun içi para alışverişi yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "5.2.3", title: "Ekonomi Manipülasyonu", description: "Ekonomiyi bozmaya yönelik eylemler yasaktır.", lastUpdate: "24.12.2025" },
-          { id: "5.2.4", title: "İş Yeri Fiyatları", description: "İş yeri sahipleri fiyatları makul tutmalıdır.", lastUpdate: "24.12.2025" },
-          { id: "5.2.5", title: "Çoklu Hesap", description: "Çoklu hesap ile ekonomi manipülasyonu yasaktır.", lastUpdate: "24.12.2025" },
+          { id: "5.2.1", title: "Para Transferleri", description: "Para transferleri kayıt altına alınır.", lastUpdate: "" },
+          { id: "5.2.2", title: "Gerçek Para Yasağı", description: "Gerçek para ile oyun içi para alışverişi yasaktır.", lastUpdate: "" },
+          { id: "5.2.3", title: "Ekonomi Manipülasyonu", description: "Ekonomiyi bozmaya yönelik eylemler yasaktır.", lastUpdate: "" },
+          { id: "5.2.4", title: "İş Yeri Fiyatları", description: "İş yeri sahipleri fiyatları makul tutmalıdır.", lastUpdate: "" },
+          { id: "5.2.5", title: "Çoklu Hesap", description: "Çoklu hesap ile ekonomi manipülasyonu yasaktır.", lastUpdate: "" },
         ],
       },
       {
@@ -211,12 +211,12 @@ const defaultRulesData: MainCategory[] = [
         title: "Ceza Sistemi",
         description: "Bu bölümdeki kurallar aşağıda listelenmiştir.",
         rules: [
-          { id: "5.3.1", title: "İlk İhlal", description: "İlk ihlal: Sözlü uyarı verilir.", lastUpdate: "24.12.2025" },
-          { id: "5.3.2", title: "İkinci İhlal", description: "İkinci ihlal: Yazılı uyarı ve 24 saat ban.", lastUpdate: "24.12.2025" },
-          { id: "5.3.3", title: "Üçüncü İhlal", description: "Üçüncü ihlal: 7 gün ban uygulanır.", lastUpdate: "24.12.2025" },
-          { id: "5.3.4", title: "Dördüncü İhlal", description: "Dördüncü ihlal: Kalıcı ban uygulanır.", lastUpdate: "24.12.2025" },
-          { id: "5.3.5", title: "Ağır İhlaller", description: "Ağır ihlaller doğrudan kalıcı ban ile sonuçlanabilir.", lastUpdate: "24.12.2025" },
-          { id: "5.3.6", title: "Ban İtirazları", description: "Ban itirazları Discord üzerinden yapılabilir.", lastUpdate: "24.12.2025" },
+          { id: "5.3.1", title: "İlk İhlal", description: "İlk ihlal: Sözlü uyarı verilir.", lastUpdate: "" },
+          { id: "5.3.2", title: "İkinci İhlal", description: "İkinci ihlal: Yazılı uyarı ve 24 saat ban.", lastUpdate: "" },
+          { id: "5.3.3", title: "Üçüncü İhlal", description: "Üçüncü ihlal: 7 gün ban uygulanır.", lastUpdate: "" },
+          { id: "5.3.4", title: "Dördüncü İhlal", description: "Dördüncü ihlal: Kalıcı ban uygulanır.", lastUpdate: "" },
+          { id: "5.3.5", title: "Ağır İhlaller", description: "Ağır ihlaller doğrudan kalıcı ban ile sonuçlanabilir.", lastUpdate: "" },
+          { id: "5.3.6", title: "Ban İtirazları", description: "Ban itirazları Discord üzerinden yapılabilir.", lastUpdate: "" },
         ],
       },
     ],
@@ -234,6 +234,7 @@ const RulesEditor = () => {
   
   const [rulesId, setRulesId] = useState<string | null>(null);
   const [categories, setCategories] = useState<MainCategory[]>([]);
+  const [originalCategories, setOriginalCategories] = useState<MainCategory[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   
   // UI State
@@ -304,7 +305,9 @@ const RulesEditor = () => {
 
       if (data) {
         setRulesId(data.id);
-        setCategories((data.data as MainCategory[]) || []);
+        const loadedCategories = (data.data as MainCategory[]) || [];
+        setCategories(loadedCategories);
+        setOriginalCategories(JSON.parse(JSON.stringify(loadedCategories))); // Deep copy for comparison
         setLastUpdated(data.updated_at);
       }
     } catch (error) {
@@ -344,6 +347,7 @@ const RulesEditor = () => {
 
   const handleImportDefaults = () => {
     setCategories(defaultRulesData);
+    setOriginalCategories(JSON.parse(JSON.stringify(defaultRulesData))); // Deep copy
     setImportConfirm(false);
     toast.success('Varsayılan kurallar içe aktarıldı. Kaydetmeyi unutmayın!');
   };
@@ -442,12 +446,6 @@ const RulesEditor = () => {
   };
 
   const updateRule = (categoryId: string, subCategoryId: string, ruleId: string, updates: Partial<Rule>) => {
-    const today = new Date().toLocaleDateString('tr-TR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-
     setCategories(categories.map(cat => {
       if (cat.id !== categoryId) return cat;
       return {
@@ -456,9 +454,34 @@ const RulesEditor = () => {
           if (sub.id !== subCategoryId) return sub;
           return {
             ...sub,
-            rules: sub.rules.map(rule =>
-              rule.id === ruleId ? { ...rule, ...updates, lastUpdate: today } : rule
-            ),
+            rules: sub.rules.map(rule => {
+              if (rule.id !== ruleId) return rule;
+              
+              // Find original rule for comparison
+              const originalCat = originalCategories.find(c => c.id === categoryId);
+              const originalSub = originalCat?.subCategories.find(s => s.id === subCategoryId);
+              const originalRule = originalSub?.rules.find(r => r.id === ruleId);
+              
+              // Check if content actually changed
+              const newTitle = updates.title ?? rule.title;
+              const newDescription = updates.description ?? rule.description;
+              const hasContentChanged = 
+                newTitle !== originalRule?.title || 
+                newDescription !== originalRule?.description;
+              
+              // Only update lastUpdate if content changed
+              const today = new Date().toLocaleDateString('tr-TR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+              });
+              
+              return { 
+                ...rule, 
+                ...updates, 
+                lastUpdate: hasContentChanged ? today : rule.lastUpdate 
+              };
+            }),
           };
         }),
       };
