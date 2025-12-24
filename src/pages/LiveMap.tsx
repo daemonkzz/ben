@@ -443,7 +443,7 @@ export default function LiveMap() {
                 excalidrawAPI={handleAPIReady}
                 viewModeEnabled={true}
                 zenModeEnabled={true}
-                theme="dark"
+                theme="light"
                 langCode="tr-TR"
                 UIOptions={{
                   canvasActions: {
