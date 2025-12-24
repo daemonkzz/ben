@@ -1,7 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { supabase } from "@/integrations/supabase/client";
 import testimonialBg from "@/assets/testimonial-bg.png";
+import type { UpdateCategory } from "@/types/update";
 
 // Add your testimonial images here
 const testimonialCards = [
@@ -10,6 +13,14 @@ const testimonialCards = [
   { id: 3, image: testimonialBg },
 ];
 
+interface UpdateNote {
+  id: string;
+  title: string;
+  version?: string;
+  category: UpdateCategory;
+  published_at: string;
+  cover_image_url?: string;
+}
 // Generate particles for the portal effect
 const generateParticles = (count: number) => {
   return Array.from({ length: count }, (_, i) => ({
@@ -26,6 +37,29 @@ const TestimonialsSection = () => {
   const [activeIndex, setActiveIndex] = useState(1);
   const [direction, setDirection] = useState(1);
   const particles = useMemo(() => generateParticles(20), []);
+  const [updateNotes, setUpdateNotes] = useState<UpdateNote[]>([]);
+
+  // Fetch updates from database
+  useEffect(() => {
+    const fetchUpdates = async () => {
+      const { data, error } = await supabase
+        .from("updates")
+        .select("id, title, version, category, published_at, cover_image_url")
+        .eq("is_published", true)
+        .order("published_at", { ascending: false })
+        .limit(3);
+
+      if (!error && data) {
+        setUpdateNotes(data as UpdateNote[]);
+      }
+    };
+    fetchUpdates();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
 
   // Auto-rotate cards
   useEffect(() => {
@@ -269,104 +303,140 @@ const TestimonialsSection = () => {
             </motion.span>
           </motion.h3>
 
-          {/* Mobile: Horizontal scroll showing one card at a time, Desktop: Grid */}
-          <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory md:grid md:grid-cols-3 md:gap-6 md:overflow-visible md:pb-0 scrollbar-hide">
-            {[
-              { version: "v1.2.0", title: "Yeni Bulmacalar Eklendi", date: "15 Ocak 2025" },
-              { version: "v1.1.5", title: "Performans İyileştirmeleri", date: "10 Ocak 2025" },
-              { version: "v1.1.0", title: "Yeni Harita Açıldı", date: "5 Ocak 2025" },
-            ].map((note, index) => (
-              <motion.div
-                key={index}
-                className="flex-shrink-0 w-[280px] sm:w-[300px] md:w-auto snap-center bg-[#1a1a1a] rounded-xl md:rounded-2xl overflow-hidden border border-white/[0.06] cursor-pointer group relative"
-                initial={{ opacity: 0, y: 40, scale: 0.95 }}
-                animate={isVisible ? { opacity: 1, y: 0, scale: 1 } : {}}
-                transition={{ 
-                  duration: 0.6, 
-                  delay: 0.5 + index * 0.12,
-                  ease: [0.25, 0.46, 0.45, 0.94]
-                }}
-                whileHover={{ 
-                  y: -10, 
-                  scale: 1.02,
-                  transition: { duration: 0.3 }
-                }}
-              >
-                {/* Hover glow effect */}
-                <motion.div 
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                  style={{
-                    background: "radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
-                  }}
-                />
-                
-                {/* Image placeholder */}
-                <div className="aspect-[16/10] md:aspect-[4/3] bg-gradient-to-br from-secondary/50 to-secondary/20 relative overflow-hidden">
-                  {/* Animated background pattern */}
-                  <motion.div 
-                    className="absolute inset-0"
-                    style={{
-                      backgroundImage: "radial-gradient(circle at 30% 70%, hsl(var(--primary) / 0.3) 0%, transparent 50%)",
+          {/* Cards container with conditional centering */}
+          <div className={`flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory md:overflow-visible md:pb-0 scrollbar-hide ${
+            updateNotes.length < 3 
+              ? 'md:flex md:justify-center md:gap-6' 
+              : 'md:grid md:grid-cols-3 md:gap-6'
+          }`}>
+            {updateNotes.length === 0 ? (
+              <div className="text-center py-12 w-full">
+                <p className="text-muted-foreground">Henüz güncelleme bulunmuyor.</p>
+              </div>
+            ) : (
+              updateNotes.map((note, index) => (
+                <Link
+                  key={note.id}
+                  to={`/guncellemeler/${note.id}`}
+                  className="block flex-shrink-0 w-[280px] sm:w-[300px] md:w-[320px] md:flex-shrink-0"
+                >
+                  <motion.div
+                    className="h-full snap-center bg-[#1a1a1a] rounded-xl md:rounded-2xl overflow-hidden border border-white/[0.06] cursor-pointer group relative"
+                    initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                    animate={isVisible ? { opacity: 1, y: 0, scale: 1 } : {}}
+                    transition={{ 
+                      duration: 0.6, 
+                      delay: 0.5 + index * 0.12,
+                      ease: [0.25, 0.46, 0.45, 0.94]
                     }}
-                    animate={isVisible ? {
-                      opacity: [0.2, 0.4, 0.2],
-                    } : {}}
-                    transition={{ duration: 3, repeat: Infinity, delay: index * 0.3 }}
-                  />
-                  
-                  {/* Shimmer effect */}
-                  <motion.div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100"
-                    style={{
-                      background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
+                    whileHover={{ 
+                      y: -10, 
+                      scale: 1.02,
+                      transition: { duration: 0.3 }
                     }}
-                    animate={{ x: ["-100%", "200%"] }}
-                    transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-                  />
-                  
-                  {/* Version badge */}
-                  <motion.div 
-                    className="absolute top-3 left-3 bg-primary/90 text-background text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full"
-                    whileHover={{ scale: 1.1 }}
                   >
-                    {note.version}
-                  </motion.div>
-                </div>
+                    {/* Hover glow effect */}
+                    <motion.div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10"
+                      style={{
+                        background: "radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
+                      }}
+                    />
+                    
+                    {/* Image */}
+                    <div className="aspect-[16/10] md:aspect-[4/3] relative overflow-hidden">
+                      {note.cover_image_url ? (
+                        <img
+                          src={note.cover_image_url}
+                          alt={note.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      ) : (
+                        <>
+                          <div className="w-full h-full bg-gradient-to-br from-secondary/50 to-secondary/20" />
+                          {/* Animated background pattern */}
+                          <motion.div 
+                            className="absolute inset-0"
+                            style={{
+                              backgroundImage: "radial-gradient(circle at 30% 70%, hsl(var(--primary) / 0.3) 0%, transparent 50%)",
+                            }}
+                            animate={isVisible ? {
+                              opacity: [0.2, 0.4, 0.2],
+                            } : {}}
+                            transition={{ duration: 3, repeat: Infinity, delay: index * 0.3 }}
+                          />
+                        </>
+                      )}
+                      
+                      {/* Shimmer effect */}
+                      <motion.div 
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100"
+                        style={{
+                          background: "linear-gradient(90deg, transparent 0%, hsl(var(--primary) / 0.1) 50%, transparent 100%)",
+                        }}
+                        animate={{ x: ["-100%", "200%"] }}
+                        transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                      />
 
-                {/* Content */}
-                <div className="p-4 md:p-5">
-                  <p className="text-foreground/40 text-[10px] md:text-xs mb-1.5">{note.date}</p>
-                  <h4 className="text-foreground font-display text-sm md:text-base lg:text-lg italic mb-3 group-hover:text-primary transition-colors duration-300">
-                    {note.title}
-                  </h4>
-                  <motion.button
-                    className="text-primary text-xs md:text-sm font-medium flex items-center gap-2 group/btn"
-                    whileHover={{ x: 4 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Devamını Oku
-                    <motion.svg 
-                      className="w-4 h-4" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                      animate={{ x: [0, 3, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </motion.svg>
-                  </motion.button>
-                </div>
-              </motion.div>
-            ))}
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a] via-transparent to-transparent" />
+                      
+                      {/* Version badge - top left */}
+                      <div className="absolute top-3 left-3 h-6">
+                        {note.version && (
+                          <motion.div 
+                            className="bg-primary/90 text-background text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full"
+                            whileHover={{ scale: 1.1 }}
+                          >
+                            {note.version}
+                          </motion.div>
+                        )}
+                      </div>
+
+                      {/* Category badge - top right */}
+                      <div className="absolute top-3 right-3 text-[10px] uppercase tracking-wider px-2 py-0.5 bg-background/80 backdrop-blur-sm text-primary border border-primary/30">
+                        {note.category === "update" ? "Güncelleme" : "Haber"}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-4 md:p-5">
+                      <p className="text-foreground/40 text-[10px] md:text-xs mb-1.5">
+                        {note.published_at ? formatDate(note.published_at) : ''}
+                      </p>
+                      <h4 className="text-foreground font-display text-sm md:text-base lg:text-lg italic mb-3 group-hover:text-primary transition-colors duration-300 line-clamp-2">
+                        {note.title}
+                      </h4>
+                      <motion.span
+                        className="text-primary text-xs md:text-sm font-medium flex items-center gap-2"
+                      >
+                        Devamını Oku
+                        <motion.svg 
+                          className="w-4 h-4" 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                          animate={{ x: [0, 3, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </motion.svg>
+                      </motion.span>
+                    </div>
+                  </motion.div>
+                </Link>
+              ))
+            )}
           </div>
           
           {/* Mobile scroll indicator dots */}
-          <div className="flex justify-center gap-2 mt-4 md:hidden">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="w-1.5 h-1.5 rounded-full bg-foreground/20" />
-            ))}
-          </div>
+          {updateNotes.length > 0 && (
+            <div className="flex justify-center gap-2 mt-4 md:hidden">
+              {updateNotes.map((_, i) => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full bg-foreground/20" />
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
     </section>
