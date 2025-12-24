@@ -172,12 +172,12 @@ const Header = () => {
                 whileHover="hover"
                 transition={{ delay: 0.6 }}
               >
-                <a 
-                  href="#harita" 
+                <Link 
+                  to="/canli-harita"
                   className="text-foreground/50 hover:text-foreground transition-colors text-[11px] tracking-wider font-light italic"
                 >
                   Harita
-                </a>
+                </Link>
               </motion.div>
             </div>
           </div>
@@ -371,16 +371,19 @@ const Header = () => {
                   Hikaye
                 </Link>
               </motion.div>
-              <motion.a 
-                href="#harita" 
-                className="block py-3 px-4 text-foreground/70 hover:text-primary transition-colors text-sm" 
-                onClick={() => setIsMenuOpen(false)}
+              <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                Harita
-              </motion.a>
+                <Link 
+                  to="/canli-harita"
+                  className="block py-3 px-4 text-foreground/70 hover:text-primary transition-colors text-sm"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Harita
+                </Link>
+              </motion.div>
               <div className="px-4 pt-4 border-t border-border/30 mt-2">
                 {!isLoading && user ? (
                   <div className="flex flex-col gap-3">
