@@ -91,6 +91,9 @@ const getRenderableElements = (elements: any[], files: BinaryFiles) => {
 };
 
 export default function LiveMap() {
+  const location = useLocation();
+  const debugMode = new URLSearchParams(location.search).get('debug') === '1';
+
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [whiteboardId, setWhiteboardId] = useState<string | null>(null);
@@ -101,6 +104,9 @@ export default function LiveMap() {
   const [fileCount, setFileCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [apiReady, setApiReady] = useState(false);
+  const [fallbackDataUrl, setFallbackDataUrl] = useState<string | null>(null);
+  const [useFallback, setUseFallback] = useState(true); // Default to fallback for guaranteed visibility
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   
   const sceneDataRef = useRef<SceneData | null>(null);
 
@@ -139,7 +145,7 @@ export default function LiveMap() {
     try {
       // LiveMap is read-only; force a high-contrast background so dark strokes/images are visible.
       const persistedAppState: Partial<AppState> = {
-        viewBackgroundColor: DEFAULT_VIEW_BG,
+        viewBackgroundColor: '#ffffff',
       };
 
       if (sceneData.appState?.scrollX != null) persistedAppState.scrollX = sceneData.appState.scrollX;
@@ -257,14 +263,68 @@ export default function LiveMap() {
     }
   }, []);
 
-  // Initial load
+  // Generate fallback canvas image from scene data
+  const generateFallbackImage = useCallback(async (sceneData: SceneData) => {
+    if (!sceneData || !sceneData.elements || sceneData.elements.length === 0) {
+      console.log('[LiveMap] No elements for fallback render');
+      return;
+    }
+
+    try {
+      const files = normalizeFiles(sceneData.files);
+      const elements = normalizeElements(sceneData.elements, files);
+      const renderableElements = getRenderableElements(elements, files);
+
+      if (renderableElements.length === 0) {
+        console.log('[LiveMap] No renderable elements for fallback');
+        return;
+      }
+
+      console.log('[LiveMap] Generating fallback canvas with', renderableElements.length, 'elements');
+
+      const canvas = await exportToCanvas({
+        elements: renderableElements,
+        appState: {
+          viewBackgroundColor: '#ffffff',
+          exportWithDarkMode: false,
+        },
+        files,
+        maxWidthOrHeight: 1920,
+      });
+
+      const dataUrl = canvas.toDataURL('image/png');
+      setFallbackDataUrl(dataUrl);
+      console.log('[LiveMap] Fallback image generated:', canvas.width, 'x', canvas.height);
+
+      // Debug info
+      setDebugInfo({
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
+        elementsCount: renderableElements.length,
+        firstElement: renderableElements[0] ? {
+          type: renderableElements[0].type,
+          x: Math.round(renderableElements[0].x),
+          y: Math.round(renderableElements[0].y),
+          width: Math.round(renderableElements[0].width || 0),
+          height: Math.round(renderableElements[0].height || 0),
+        } : null,
+      });
+    } catch (err) {
+      console.error('[LiveMap] Fallback render error:', err);
+    }
+  }, []);
+
+  // Initial load + generate fallback image
   useEffect(() => {
     const init = async () => {
-      await loadWhiteboard();
+      const sceneData = await loadWhiteboard();
+      if (sceneData) {
+        await generateFallbackImage(sceneData);
+      }
       setIsLoading(false);
     };
     init();
-  }, [loadWhiteboard]);
+  }, [loadWhiteboard, generateFallbackImage]);
 
   // Apply scene when API becomes ready and we have data
   useEffect(() => {
@@ -282,8 +342,12 @@ export default function LiveMap() {
     setIsRefreshing(true);
     const sceneData = await loadWhiteboard(true);
     
-    if (sceneData && excalidrawAPI) {
-      applyScene(excalidrawAPI, sceneData, true);
+    if (sceneData) {
+      if (excalidrawAPI) {
+        applyScene(excalidrawAPI, sceneData, true);
+      }
+      // Also generate fallback
+      await generateFallbackImage(sceneData);
     }
     
     setIsRefreshing(false);
@@ -433,8 +497,39 @@ export default function LiveMap() {
           </div>
         ) : (
           <>
+            {/* Debug Panel (only when ?debug=1) */}
+            {debugMode && (
+              <div className="absolute top-2 left-2 z-50 bg-black/80 text-white text-xs p-3 rounded-lg max-w-xs font-mono">
+                <div className="font-bold mb-2 text-yellow-400">DEBUG MODE</div>
+                <div>Elements: {elementCount}</div>
+                <div>Files: {fileCount}</div>
+                <div>API Ready: {apiReady ? 'Yes' : 'No'}</div>
+                <div>Fallback: {fallbackDataUrl ? 'Ready' : 'None'}</div>
+                <div>Using Fallback: {useFallback ? 'Yes' : 'No'}</div>
+                {debugInfo && (
+                  <>
+                    <div className="mt-2 text-green-400">Canvas: {debugInfo.canvasWidth}x{debugInfo.canvasHeight}</div>
+                    {debugInfo.firstElement && (
+                      <div className="mt-1 text-blue-400">
+                        First: {debugInfo.firstElement.type} @ ({debugInfo.firstElement.x}, {debugInfo.firstElement.y})
+                        <br />Size: {debugInfo.firstElement.width}x{debugInfo.firstElement.height}
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => setUseFallback(!useFallback)}
+                    className="px-2 py-1 bg-blue-600 rounded text-xs"
+                  >
+                    Toggle Fallback
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Empty state overlay */}
-            {elementCount === 0 && apiReady && (
+            {elementCount === 0 && apiReady && !fallbackDataUrl && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <div className="bg-card/90 backdrop-blur-sm rounded-lg p-8 text-center border border-border pointer-events-auto">
                   <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
@@ -450,8 +545,28 @@ export default function LiveMap() {
               </div>
             )}
 
-            {/* Excalidraw - always render, apply scene when API is ready */}
-            <div style={{ width: '100%', height: '100%' }}>
+            {/* Fallback Image Mode - guaranteed to show if we have elements */}
+            {useFallback && fallbackDataUrl && (
+              <div className="absolute inset-0 z-20 bg-white flex items-center justify-center overflow-auto">
+                <img
+                  src={fallbackDataUrl}
+                  alt="Harita"
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                />
+              </div>
+            )}
+
+            {/* Excalidraw - with explicit white background */}
+            <div 
+              style={{ 
+                width: '100%', 
+                height: '100%',
+                backgroundColor: '#ffffff',
+                position: 'relative',
+                zIndex: 10,
+              }}
+              className={useFallback ? 'hidden' : ''}
+            >
               <Excalidraw
                 excalidrawAPI={handleAPIReady}
                 viewModeEnabled={true}
