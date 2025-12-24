@@ -214,7 +214,7 @@ const BasvuruRevision = () => {
         updatedContent[key] = Array.isArray(value) ? value.join(', ') : (value || '');
       });
 
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('applications')
         .update({
           content: updatedContent,
@@ -223,11 +223,18 @@ const BasvuruRevision = () => {
           revision_requested_fields: null,
           revision_notes: null
         })
-        .eq('id', application.id);
+        .eq('id', application.id)
+        .eq('user_id', user?.id)
+        .select();
 
       if (error) {
         console.error('Update error:', error);
         throw error;
+      }
+
+      // Check if any row was actually updated
+      if (!data || data.length === 0) {
+        throw new Error('Güncelleme yapılamadı. Lütfen tekrar deneyin.');
       }
 
       setIsSubmitted(true);
