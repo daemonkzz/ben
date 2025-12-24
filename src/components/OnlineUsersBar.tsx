@@ -35,7 +35,7 @@ const OnlineUsersBar: React.FC<OnlineUsersBarProps> = ({ maxVisible = 8 }) => {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
-        className="flex items-center justify-center gap-3 mt-4"
+        className="flex items-center justify-center gap-3"
       >
         {/* Online indicator */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
