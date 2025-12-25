@@ -1,1 +1,4 @@
 project_id = "bbuatycybtwblwyychag"
+
+[functions.verify-totp]
+verify_jwt = false

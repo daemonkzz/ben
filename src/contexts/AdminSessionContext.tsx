@@ -3,7 +3,6 @@ import { useIdleTimer } from 'react-idle-timer';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { verifyTOTP } from '@epic-web/totp';
 import type { Admin2FASettings } from '@/types/admin2fa';
 
 const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
@@ -107,7 +106,7 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [user, authLoading]);
 
-  // Fetch user's 2FA settings
+  // Fetch user's 2FA settings from the secure view (excludes totp_secret)
   const fetch2FASettings = useCallback(async () => {
     // Wait until auth state is resolved; otherwise refresh (F5) briefly looks like "no user"
     if (authLoading) return;
@@ -119,19 +118,28 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     try {
+      // Use the secure view that doesn't expose totp_secret
       const { data, error } = await supabase
-        .from('admin_2fa_settings')
+        .from('admin_2fa_status')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching 2FA settings:', error);
+        if (import.meta.env.DEV) console.error('Error fetching 2FA settings:', error);
       }
 
-      setAdmin2FASettings(data as Admin2FASettings | null);
+      // Map the view data to the Admin2FASettings type (without totp_secret)
+      if (data) {
+        setAdmin2FASettings({
+          ...data,
+          totp_secret: null, // Never exposed from view
+        } as Admin2FASettings);
+      } else {
+        setAdmin2FASettings(null);
+      }
     } catch (error) {
-      console.error('Error fetching 2FA settings:', error);
+      if (import.meta.env.DEV) console.error('Error fetching 2FA settings:', error);
     } finally {
       setIsLoading(false);
     }
@@ -229,9 +237,9 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => clearInterval(interval);
   }, [isAdminAuthenticated, user?.id, isInAdminArea, createOrExtendSession, lockSession]);
 
-  // Verify 2FA code
+  // Verify 2FA code via secure Edge Function
   const verify2FA = useCallback(async (code: string): Promise<{ success: boolean; error?: string }> => {
-    if (!user || !admin2FASettings?.totp_secret) {
+    if (!user || !admin2FASettings) {
       return { success: false, error: '2FA ayarları bulunamadı' };
     }
 
@@ -240,55 +248,43 @@ export const AdminSessionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
 
     try {
-      // Verify the TOTP code
-      const result = await verifyTOTP({
-        otp: code,
-        secret: admin2FASettings.totp_secret,
-        algorithm: 'SHA-1',
-        period: 30,
-        digits: 6,
-        window: 1, // Allow 1 period before/after for clock skew
-      });
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        return { success: false, error: 'Oturum bulunamadı' };
+      }
 
-      if (result) {
-        // Reset failed attempts on success
-        await supabase
-          .from('admin_2fa_settings')
-          .update({ failed_attempts: 0, last_failed_at: null })
-          .eq('user_id', user.id);
+      // Call the secure Edge Function for TOTP verification
+      const response = await fetch(
+        'https://bbuatycybtwblwyychag.supabase.co/functions/v1/verify-totp',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ code }),
+        }
+      );
 
+      const result = await response.json();
+
+      if (result.success) {
         setIsAdminAuthenticated(true);
         setRemainingTime(null);
         createOrExtendSession(user.id);
         return { success: true };
       } else {
-        // Increment failed attempts
-        const newAttempts = (admin2FASettings.failed_attempts || 0) + 1;
-        const shouldBlock = newAttempts >= 5;
-
-        await supabase
-          .from('admin_2fa_settings')
-          .update({
-            failed_attempts: newAttempts,
-            last_failed_at: new Date().toISOString(),
-            is_blocked: shouldBlock,
-          })
-          .eq('user_id', user.id);
-
-        // Refresh settings
+        // Refresh settings to get updated failed_attempts
         await fetch2FASettings();
-
-        if (shouldBlock) {
-          return { success: false, error: 'Çok fazla başarısız deneme. Hesabınız bloklandı.' };
-        }
-
-        return { success: false, error: `Yanlış kod. ${5 - newAttempts} deneme hakkınız kaldı.` };
+        return { success: false, error: result.error || 'Doğrulama başarısız' };
       }
     } catch (error) {
-      console.error('2FA verification error:', error);
+      if (import.meta.env.DEV) console.error('2FA verification error:', error);
       return { success: false, error: 'Doğrulama sırasında hata oluştu' };
     }
-  }, [user, admin2FASettings, fetch2FASettings]);
+  }, [user, admin2FASettings, fetch2FASettings, createOrExtendSession]);
 
   return (
     <AdminSessionContext.Provider
