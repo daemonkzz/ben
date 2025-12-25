@@ -161,27 +161,27 @@ const HeroSection = () => {
                 </div>
               </motion.h1>
               
-              {/* Subtitle Badge */}
+              {/* Subtitle */}
               <motion.div 
-                className="relative inline-flex items-center"
+                className="flex items-center gap-1"
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 1.0 }}
               >
-                <div className="relative">
-                  {/* Glow effect */}
-                  <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent rounded-lg blur-md" />
-                  
-                  {/* Badge content */}
-                  <div className="relative flex items-center gap-3 bg-background/60 backdrop-blur-md border border-primary/30 rounded-lg px-5 py-2.5">
-                    {/* Left accent line */}
-                    <div className="w-1 h-6 bg-gradient-to-b from-primary to-primary/40 rounded-full" />
-                    
-                    <span className="text-base text-foreground/90 tracking-widest uppercase font-medium not-italic">
-                      Post-Apokaliptik Roleplay Deneyimi
-                    </span>
-                  </div>
-                </div>
+                {"POST-APOKALİPTİK ROLEPLAY DENEYİMİ".split("").map((letter, i) => (
+                  <motion.span 
+                    key={`subtitle-${i}`} 
+                    className="inline-block font-display text-3xl text-foreground/80 tracking-wider"
+                    whileHover={{
+                      scale: 1.1,
+                      color: "hsl(var(--primary))",
+                      textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
+                    }}
+                    style={{ marginRight: letter === " " ? "0.5rem" : "0" }}
+                  >
+                    {letter === " " ? "\u00A0" : letter}
+                  </motion.span>
+                ))}
               </motion.div>
               
               {/* Button */}
@@ -307,22 +307,27 @@ const HeroSection = () => {
               </div>
             </motion.h1>
             
-            {/* Subtitle Badge - Mobile */}
+            {/* Subtitle - Mobile */}
             <motion.div 
-              className="relative inline-flex items-center"
+              className="flex flex-wrap items-center"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 1.0 }}
             >
-              <div className="relative">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 via-primary/10 to-transparent rounded-md blur-sm" />
-                <div className="relative flex items-center gap-2 bg-background/60 backdrop-blur-md border border-primary/30 rounded-md px-3 py-1.5">
-                  <div className="w-0.5 h-4 bg-gradient-to-b from-primary to-primary/40 rounded-full" />
-                  <span className="text-xs sm:text-sm text-foreground/90 tracking-wider uppercase font-medium not-italic">
-                    Post-Apokaliptik Roleplay Deneyimi
-                  </span>
-                </div>
-              </div>
+              {"POST-APOKALİPTİK ROLEPLAY DENEYİMİ".split("").map((letter, i) => (
+                <motion.span 
+                  key={`subtitle-mobile-${i}`} 
+                  className="inline-block font-display text-lg sm:text-xl text-foreground/80 tracking-wider"
+                  whileHover={{
+                    scale: 1.1,
+                    color: "hsl(var(--primary))",
+                    textShadow: "0 0 20px hsl(var(--primary) / 0.8)"
+                  }}
+                  style={{ marginRight: letter === " " ? "0.4rem" : "0" }}
+                >
+                  {letter === " " ? "\u00A0" : letter}
+                </motion.span>
+              ))}
             </motion.div>
           </motion.div>
           
