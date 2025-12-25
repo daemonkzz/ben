@@ -25,7 +25,6 @@ import ManageAccess from "./pages/admin/ManageAccess";
 import NotificationEditor from "./pages/admin/NotificationEditor";
 import WhiteboardEditor from "./pages/admin/WhiteboardEditor";
 import Locked from "./pages/admin/Locked";
-import LiveMap from "./pages/LiveMap";
 import NotFound from "./pages/NotFound";
 import AmbientParticles from "./components/AmbientParticles";
 
@@ -47,7 +46,6 @@ const RouteEffects = () => {
         <Route path="/basvuru" element={<Basvuru />} />
         <Route path="/basvuru/:formId" element={<BasvuruForm />} />
         <Route path="/basvuru/:formId/revision" element={<BasvuruRevision />} />
-        <Route path="/canli-harita" element={<LiveMap />} />
 
         {/* Admin Routes - Protected with 2FA */}
         <Route
