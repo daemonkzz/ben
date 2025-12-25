@@ -109,7 +109,6 @@ export const useCursorSync = ({
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const newCursors = new Map<string, CursorPosition>();
-        const currentMapState = mapStateRef.current;
 
         Object.keys(state).forEach((key) => {
           if (key === user.id) return; // Skip own cursor
@@ -118,17 +117,10 @@ export const useCursorSync = ({
           if (presences && presences.length > 0) {
             const presence = presences[0];
             if (presence.cursor && typeof presence.cursor.worldX === 'number') {
-              // Convert world coordinates to viewport coordinates based on OUR map state
-              const { scale, position } = currentMapState;
-              
-              // World to viewport: viewport = (world * scale) + offset
-              // offset is position as percentage of container
-              const viewportX = (presence.cursor.worldX * scale) + (position.x / 10); // position.x is in px, normalize
-              const viewportY = (presence.cursor.worldY * scale) + (position.y / 10);
-              
+              // Store world coordinates - CursorOverlay will do the viewport conversion
               newCursors.set(key, {
-                x: viewportX,
-                y: viewportY,
+                x: 0, // Will be calculated by CursorOverlay
+                y: 0, // Will be calculated by CursorOverlay
                 worldX: presence.cursor.worldX,
                 worldY: presence.cursor.worldY,
                 user_id: presence.user_id,

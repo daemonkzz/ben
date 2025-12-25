@@ -5,6 +5,7 @@ import { CursorPosition, MapState } from '@/hooks/useCursorSync';
 interface CursorOverlayProps {
   cursors: CursorPosition[];
   mapState?: MapState;
+  containerSize?: { width: number; height: number };
 }
 
 // Cursor SVG component with gradient fill and colored border
@@ -37,22 +38,26 @@ const CursorIcon = ({ borderColor, odometer }: { borderColor: string; odometer: 
   );
 };
 
-const CursorOverlay = memo(({ cursors, mapState }: CursorOverlayProps) => {
+const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayProps) => {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
       <AnimatePresence>
         {cursors.map((cursor, index) => {
-          // Use world coordinates transformed by OUR map state for display
-          let displayX = cursor.x;
-          let displayY = cursor.y;
+          // Calculate display position from world coordinates
+          let displayX = cursor.worldX;
+          let displayY = cursor.worldY;
           
-          if (mapState) {
+          if (mapState && containerSize && containerSize.width > 0 && containerSize.height > 0) {
             const { scale, position } = mapState;
-            // World to viewport: viewport = (world * scale) + offset
-            // Offset needs to be as percentage - position is in pixels
-            // We estimate container size as 100% = container width
-            displayX = (cursor.worldX * scale) + (position.x / 10);
-            displayY = (cursor.worldY * scale) + (position.y / 10);
+            const { width, height } = containerSize;
+            
+            // World to viewport: viewport = (world * scale) + offsetPercent
+            // position is in pixels, convert to percentage
+            const offsetXPercent = (position.x / width) * 100;
+            const offsetYPercent = (position.y / height) * 100;
+            
+            displayX = (cursor.worldX * scale) + offsetXPercent;
+            displayY = (cursor.worldY * scale) + offsetYPercent;
           }
           
           // Hide cursors outside viewport with some margin

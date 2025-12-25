@@ -71,6 +71,28 @@ const Hikaye = () => {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Container size for cursor overlay calculations
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+
+  // Track container size with ResizeObserver
+  useEffect(() => {
+    const container = isFullscreen ? fullscreenContainerRef.current : mapContainerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      setContainerSize({ width: rect.width, height: rect.height });
+    };
+
+    // Initial size
+    updateSize();
+
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [isFullscreen, activeTab]);
 
   // Map state for cursor sync
   const mapStateForCursor = { scale, position };
@@ -492,7 +514,7 @@ const Hikaye = () => {
               onTouchEnd={handleTouchEnd}
             >
               {/* Cursor Overlay */}
-              <CursorOverlay cursors={cursors} mapState={mapStateForCursor} />
+              <CursorOverlay cursors={cursors} mapState={mapStateForCursor} containerSize={containerSize} />
 
               <div
                 className="absolute inset-0 flex items-center justify-center will-change-transform"
@@ -824,7 +846,7 @@ const Hikaye = () => {
                   onTouchEnd={handleTouchEnd}
                 >
                   {/* Cursor Overlay */}
-                  <CursorOverlay cursors={cursors} mapState={mapStateForCursor} />
+                  <CursorOverlay cursors={cursors} mapState={mapStateForCursor} containerSize={containerSize} />
                   {/* Online Users Bar - Absolute overlay, no layout shift */}
                   <AnimatePresence>
                     {user && (
