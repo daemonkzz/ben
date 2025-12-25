@@ -73,27 +73,48 @@ const Hikaye = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
   
-  // Container size for cursor overlay calculations
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  // Image refs for coordinate calculations
+  const mapImageRef = useRef<HTMLImageElement>(null);
+  const fullscreenImageRef = useRef<HTMLImageElement>(null);
+  
+  // Store rects for overlay rendering
+  const [imageRect, setImageRect] = useState<DOMRect | null>(null);
+  const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
 
-  // Track container size with ResizeObserver
+  // Update rects whenever scale, position, or fullscreen changes
   useEffect(() => {
-    const container = isFullscreen ? fullscreenContainerRef.current : mapContainerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      const rect = container.getBoundingClientRect();
-      setContainerSize({ width: rect.width, height: rect.height });
+    const updateRects = () => {
+      const container = isFullscreen ? fullscreenContainerRef.current : mapContainerRef.current;
+      const image = isFullscreen ? fullscreenImageRef.current : mapImageRef.current;
+      
+      if (container) {
+        setContainerRect(container.getBoundingClientRect());
+      }
+      if (image) {
+        setImageRect(image.getBoundingClientRect());
+      }
     };
 
-    // Initial size
-    updateSize();
+    // Initial update
+    updateRects();
 
-    const observer = new ResizeObserver(updateSize);
-    observer.observe(container);
+    // Update on animation frame for smooth tracking
+    let rafId: number;
+    const scheduleUpdate = () => {
+      rafId = requestAnimationFrame(() => {
+        updateRects();
+        scheduleUpdate();
+      });
+    };
+    
+    if (activeTab === "hikaye-tablosu") {
+      scheduleUpdate();
+    }
 
-    return () => observer.disconnect();
-  }, [isFullscreen, activeTab]);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [isFullscreen, activeTab, scale, position]);
 
   // Map state for cursor sync
   const mapStateForCursor = { scale, position };
@@ -110,8 +131,7 @@ const Hikaye = () => {
     cursors,
     pings,
     isConnected: isCursorSyncConnected,
-    handleMouseMove: handleCursorMove,
-    handleTouchMove: handleCursorTouchMove,
+    updateCursor,
     handleMouseLeave: handleCursorLeave,
     sendPing,
   } = useCursorSync({
@@ -119,50 +139,67 @@ const Hikaye = () => {
     mapState: mapStateForCursor,
   });
 
-  // Convert viewport coordinates to world coordinates for ping
-  const viewportToWorld = useCallback((viewportX: number, viewportY: number, containerWidth: number, containerHeight: number) => {
-    const offsetXPercent = (position.x / containerWidth) * 100;
-    const offsetYPercent = (position.y / containerHeight) * 100;
+  // Get normalized (u,v) coordinates from mouse/touch event
+  const getImageNormalizedCoords = useCallback((clientX: number, clientY: number): { u: number; v: number } | null => {
+    const image = isFullscreen ? fullscreenImageRef.current : mapImageRef.current;
+    if (!image) return null;
     
-    const worldX = 50 + (viewportX - 50 - offsetXPercent) / scale;
-    const worldY = 50 + (viewportY - 50 - offsetYPercent) / scale;
+    const rect = image.getBoundingClientRect();
+    const u = (clientX - rect.left) / rect.width;
+    const v = (clientY - rect.top) / rect.height;
     
-    return { worldX, worldY };
-  }, [position, scale]);
+    // Only return if within image bounds
+    if (u >= 0 && u <= 1 && v >= 0 && v <= 1) {
+      return { u, v };
+    }
+    return null;
+  }, [isFullscreen]);
+
+  // Handle cursor move
+  const handleCursorMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const coords = getImageNormalizedCoords(e.clientX, e.clientY);
+    if (coords) {
+      updateCursor(coords.u, coords.v);
+    }
+  }, [getImageNormalizedCoords, updateCursor]);
+
+  // Handle touch move for cursor
+  const handleCursorTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const coords = getImageNormalizedCoords(touch.clientX, touch.clientY);
+    if (coords) {
+      updateCursor(coords.u, coords.v);
+    }
+  }, [getImageNormalizedCoords, updateCursor]);
 
   // Handle double click for ping (desktop)
-  const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>, containerRef: React.RefObject<HTMLDivElement>) => {
-    if (!containerRef.current || !user) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    const viewportX = ((e.clientX - rect.left) / rect.width) * 100;
-    const viewportY = ((e.clientY - rect.top) / rect.height) * 100;
-    
-    const { worldX, worldY } = viewportToWorld(viewportX, viewportY, rect.width, rect.height);
-    sendPing(worldX, worldY);
-  }, [user, viewportToWorld, sendPing]);
+  const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!user) return;
+    const coords = getImageNormalizedCoords(e.clientX, e.clientY);
+    if (coords) {
+      sendPing(coords.u, coords.v);
+    }
+  }, [user, getImageNormalizedCoords, sendPing]);
 
   // Handle long press start for ping (mobile)
-  const handleLongPressStart = useCallback((e: React.TouchEvent<HTMLDivElement>, containerRef: React.RefObject<HTMLDivElement>) => {
-    if (e.touches.length !== 1 || !containerRef.current || !user) return;
+  const handleLongPressStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1 || !user) return;
     
     const touch = e.touches[0];
-    const rect = containerRef.current.getBoundingClientRect();
-    
     longPressStartRef.current = { x: touch.clientX, y: touch.clientY };
     
     longPressTimerRef.current = setTimeout(() => {
-      if (!longPressStartRef.current || !containerRef.current) return;
+      if (!longPressStartRef.current) return;
       
-      const viewportX = ((longPressStartRef.current.x - rect.left) / rect.width) * 100;
-      const viewportY = ((longPressStartRef.current.y - rect.top) / rect.height) * 100;
-      
-      const { worldX, worldY } = viewportToWorld(viewportX, viewportY, rect.width, rect.height);
-      sendPing(worldX, worldY);
+      const coords = getImageNormalizedCoords(longPressStartRef.current.x, longPressStartRef.current.y);
+      if (coords) {
+        sendPing(coords.u, coords.v);
+      }
       
       longPressStartRef.current = null;
     }, 500);
-  }, [user, viewportToWorld, sendPing]);
+  }, [user, getImageNormalizedCoords, sendPing]);
 
   // Cancel long press if moved or ended early
   const cancelLongPress = useCallback(() => {
@@ -573,22 +610,22 @@ const Hikaye = () => {
               onMouseDown={handleMouseDown}
               onMouseMove={(e) => {
                 handleMouseMove(e);
-                handleCursorMove(e, fullscreenContainerRef);
+                handleCursorMove(e);
               }}
               onMouseUp={handleMouseUp}
-              onMouseLeave={(e) => {
+              onMouseLeave={() => {
                 handleMouseUp();
                 handleCursorLeave();
                 cancelLongPress();
               }}
-              onDoubleClick={(e) => handleDoubleClick(e, fullscreenContainerRef)}
+              onDoubleClick={handleDoubleClick}
               onTouchStart={(e) => {
                 handleTouchStart(e);
-                handleLongPressStart(e, fullscreenContainerRef);
+                handleLongPressStart(e);
               }}
               onTouchMove={(e) => {
                 handleTouchMove(e);
-                handleCursorTouchMove(e, fullscreenContainerRef);
+                handleCursorTouchMove(e);
                 cancelLongPress();
               }}
               onTouchEnd={() => {
@@ -597,11 +634,11 @@ const Hikaye = () => {
               }}
             >
               {/* Cursor Overlay */}
-              <CursorOverlay cursors={cursors} mapState={mapStateForCursor} containerSize={containerSize} />
+              <CursorOverlay cursors={cursors} mapState={mapStateForCursor} imageRect={imageRect} containerRect={containerRect} />
               
               {/* Ping Overlay */}
               {showPings && (
-                <PingOverlay pings={pings} mapState={mapStateForCursor} containerSize={containerSize} />
+                <PingOverlay pings={pings} mapState={mapStateForCursor} imageRect={imageRect} containerRect={containerRect} />
               )}
 
               <div
@@ -618,6 +655,7 @@ const Hikaye = () => {
                   </div>
                 ) : imageUrl ? (
                   <img
+                    ref={fullscreenImageRef}
                     src={imageUrl}
                     alt="Hikaye Tablosu"
                     className="max-w-none select-none"
@@ -919,22 +957,22 @@ const Hikaye = () => {
                   onMouseDown={handleMouseDown}
                   onMouseMove={(e) => {
                     handleMouseMove(e);
-                    handleCursorMove(e, mapContainerRef);
+                    handleCursorMove(e);
                   }}
                   onMouseUp={handleMouseUp}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={() => {
                     handleMouseUp();
                     handleCursorLeave();
                     cancelLongPress();
                   }}
-                  onDoubleClick={(e) => handleDoubleClick(e, mapContainerRef)}
+                  onDoubleClick={handleDoubleClick}
                   onTouchStart={(e) => {
                     handleTouchStart(e);
-                    handleLongPressStart(e, mapContainerRef);
+                    handleLongPressStart(e);
                   }}
                   onTouchMove={(e) => {
                     handleTouchMove(e);
-                    handleCursorTouchMove(e, mapContainerRef);
+                    handleCursorTouchMove(e);
                     cancelLongPress();
                   }}
                   onTouchEnd={() => {
@@ -943,11 +981,11 @@ const Hikaye = () => {
                   }}
                 >
                   {/* Cursor Overlay */}
-                  <CursorOverlay cursors={cursors} mapState={mapStateForCursor} containerSize={containerSize} />
+                  <CursorOverlay cursors={cursors} mapState={mapStateForCursor} imageRect={imageRect} containerRect={containerRect} />
                   
                   {/* Ping Overlay */}
                   {showPings && (
-                    <PingOverlay pings={pings} mapState={mapStateForCursor} containerSize={containerSize} />
+                    <PingOverlay pings={pings} mapState={mapStateForCursor} imageRect={imageRect} containerRect={containerRect} />
                   )}
                   
                   {/* Online Users Bar - Absolute overlay, no layout shift */}
@@ -983,6 +1021,7 @@ const Hikaye = () => {
                       </div>
                     ) : imageUrl ? (
                       <img
+                        ref={mapImageRef}
                         src={imageUrl}
                         alt="Hikaye Tablosu"
                         className="max-w-none select-none"

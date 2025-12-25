@@ -5,7 +5,8 @@ import { CursorPosition, MapState } from '@/hooks/useCursorSync';
 interface CursorOverlayProps {
   cursors: CursorPosition[];
   mapState?: MapState;
-  containerSize?: { width: number; height: number };
+  imageRect?: DOMRect | null;
+  containerRect?: DOMRect | null;
 }
 
 // Cursor SVG component with gradient fill and colored border
@@ -41,23 +42,19 @@ const CursorIcon = ({ borderColor, odometer }: { borderColor: string; odometer: 
 // Zoom-based scaling constants
 const MIN_VISIBLE_SCALE = 0.35; // Hide cursor completely below this zoom
 const LOW_OPACITY_SCALE = 0.5;  // Start reducing opacity below this
-const NORMAL_SCALE = 1.0;       // Reference scale (100% zoom)
 const MAX_CURSOR_SCALE = 1.5;   // Maximum cursor size multiplier
 const MIN_CURSOR_SCALE = 0.5;   // Minimum cursor size multiplier
 
-const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayProps) => {
+const CursorOverlay = memo(({ cursors, mapState, imageRect, containerRect }: CursorOverlayProps) => {
   // Calculate cursor scale and opacity based on map zoom
   const zoomScale = mapState?.scale ?? 1;
   
-  // Don't render anything if zoom is too low
-  if (zoomScale < MIN_VISIBLE_SCALE) {
+  // Don't render anything if zoom is too low or no rects available
+  if (zoomScale < MIN_VISIBLE_SCALE || !imageRect || !containerRect) {
     return null;
   }
   
-  // Calculate cursor scale: inversely proportional to zoom
-  // At 100% zoom (scale=1), cursor is normal size
-  // At 50% zoom (scale=0.5), cursor is smaller
-  // At 200% zoom (scale=2), cursor is larger but capped
+  // Calculate cursor scale: proportional to zoom for consistent visual size
   const cursorScale = Math.min(
     MAX_CURSOR_SCALE,
     Math.max(MIN_CURSOR_SCALE, zoomScale)
@@ -72,24 +69,16 @@ const CursorOverlay = memo(({ cursors, mapState, containerSize }: CursorOverlayP
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
       <AnimatePresence>
         {cursors.map((cursor, index) => {
-          // Calculate display position from world coordinates
-          let displayX = cursor.worldX;
-          let displayY = cursor.worldY;
+          // Convert normalized (u,v) to screen pixels using image rect
+          const screenX = imageRect.left + cursor.u * imageRect.width;
+          const screenY = imageRect.top + cursor.v * imageRect.height;
           
-          if (mapState && containerSize && containerSize.width > 0 && containerSize.height > 0) {
-            const { scale, position } = mapState;
-            const { width, height } = containerSize;
-            
-            // World to viewport (center-anchored)
-            const offsetXPercent = (position.x / width) * 100;
-            const offsetYPercent = (position.y / height) * 100;
-            
-            displayX = 50 + (cursor.worldX - 50) * scale + offsetXPercent;
-            displayY = 50 + (cursor.worldY - 50) * scale + offsetYPercent;
-          }
+          // Convert screen pixels to container-relative percentages
+          const displayX = ((screenX - containerRect.left) / containerRect.width) * 100;
+          const displayY = ((screenY - containerRect.top) / containerRect.height) * 100;
           
           // Hide cursors outside viewport with some margin
-          const isVisible = displayX >= -20 && displayX <= 120 && displayY >= -20 && displayY <= 120;
+          const isVisible = displayX >= -10 && displayX <= 110 && displayY >= -10 && displayY <= 110;
           
           if (!isVisible) return null;
           

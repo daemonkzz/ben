@@ -5,7 +5,8 @@ import { PingPosition, MapState } from '@/hooks/useCursorSync';
 interface PingOverlayProps {
   pings: PingPosition[];
   mapState?: MapState;
-  containerSize?: { width: number; height: number };
+  imageRect?: DOMRect | null;
+  containerRect?: DOMRect | null;
 }
 
 // Zoom-based scaling constants (same as CursorOverlay)
@@ -14,15 +15,15 @@ const LOW_OPACITY_SCALE = 0.5;
 const MAX_PING_SCALE = 1.5;
 const MIN_PING_SCALE = 0.5;
 
-const PingOverlay = memo(({ pings, mapState, containerSize }: PingOverlayProps) => {
+const PingOverlay = memo(({ pings, mapState, imageRect, containerRect }: PingOverlayProps) => {
   const zoomScale = mapState?.scale ?? 1;
   
-  // Don't render anything if zoom is too low
-  if (zoomScale < MIN_VISIBLE_SCALE) {
+  // Don't render anything if zoom is too low or no rects available
+  if (zoomScale < MIN_VISIBLE_SCALE || !imageRect || !containerRect) {
     return null;
   }
   
-  // Calculate ping scale: inversely proportional to zoom
+  // Calculate ping scale: proportional to zoom
   const pingScale = Math.min(
     MAX_PING_SCALE,
     Math.max(MIN_PING_SCALE, zoomScale)
@@ -37,21 +38,13 @@ const PingOverlay = memo(({ pings, mapState, containerSize }: PingOverlayProps) 
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-40">
       <AnimatePresence>
         {pings.map((ping) => {
-          // Calculate display position from world coordinates
-          let displayX = ping.worldX;
-          let displayY = ping.worldY;
+          // Convert normalized (u,v) to screen pixels using image rect
+          const screenX = imageRect.left + ping.u * imageRect.width;
+          const screenY = imageRect.top + ping.v * imageRect.height;
           
-          if (mapState && containerSize && containerSize.width > 0 && containerSize.height > 0) {
-            const { scale, position } = mapState;
-            const { width, height } = containerSize;
-            
-            // World to viewport (center-anchored)
-            const offsetXPercent = (position.x / width) * 100;
-            const offsetYPercent = (position.y / height) * 100;
-            
-            displayX = 50 + (ping.worldX - 50) * scale + offsetXPercent;
-            displayY = 50 + (ping.worldY - 50) * scale + offsetYPercent;
-          }
+          // Convert screen pixels to container-relative percentages
+          const displayX = ((screenX - containerRect.left) / containerRect.width) * 100;
+          const displayY = ((screenY - containerRect.top) / containerRect.height) * 100;
           
           // Hide pings outside viewport with some margin
           const isVisible = displayX >= -20 && displayX <= 120 && displayY >= -20 && displayY <= 120;
