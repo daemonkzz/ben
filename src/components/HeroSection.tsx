@@ -163,7 +163,7 @@ const HeroSection = () => {
               
               {/* Subtitle */}
               <motion.div 
-                className="flex items-center gap-1"
+                className="flex items-center -ml-0.5"
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: 1.0 }}
@@ -171,13 +171,16 @@ const HeroSection = () => {
                 {"POST-APOKALİPTİK ROLEPLAY DENEYİMİ".split("").map((letter, i) => (
                   <motion.span 
                     key={`subtitle-${i}`} 
-                    className="inline-block font-display text-3xl text-foreground/80 tracking-wider"
-                    whileHover={{
-                      scale: 1.1,
-                      color: "hsl(var(--primary))",
-                      textShadow: "0 0 30px hsl(var(--primary) / 0.8)"
+                    className="inline-block font-display text-4xl text-foreground tracking-tight"
+                    style={{ 
+                      marginRight: letter === " " ? "0.6rem" : "-0.02em",
+                      textShadow: "0 0 40px hsl(var(--primary) / 0.3), 0 2px 10px rgba(0,0,0,0.5)"
                     }}
-                    style={{ marginRight: letter === " " ? "0.5rem" : "0" }}
+                    whileHover={{
+                      scale: 1.15,
+                      color: "hsl(var(--primary))",
+                      textShadow: "0 0 40px hsl(var(--primary) / 0.9), 0 0 80px hsl(var(--primary) / 0.5)"
+                    }}
                   >
                     {letter === " " ? "\u00A0" : letter}
                   </motion.span>
@@ -317,13 +320,16 @@ const HeroSection = () => {
               {"POST-APOKALİPTİK ROLEPLAY DENEYİMİ".split("").map((letter, i) => (
                 <motion.span 
                   key={`subtitle-mobile-${i}`} 
-                  className="inline-block font-display text-lg sm:text-xl text-foreground/80 tracking-wider"
-                  whileHover={{
-                    scale: 1.1,
-                    color: "hsl(var(--primary))",
-                    textShadow: "0 0 20px hsl(var(--primary) / 0.8)"
+                  className="inline-block font-display text-xl sm:text-2xl text-foreground tracking-tight"
+                  style={{ 
+                    marginRight: letter === " " ? "0.4rem" : "-0.02em",
+                    textShadow: "0 0 30px hsl(var(--primary) / 0.3), 0 2px 8px rgba(0,0,0,0.5)"
                   }}
-                  style={{ marginRight: letter === " " ? "0.4rem" : "0" }}
+                  whileHover={{
+                    scale: 1.15,
+                    color: "hsl(var(--primary))",
+                    textShadow: "0 0 30px hsl(var(--primary) / 0.9), 0 0 60px hsl(var(--primary) / 0.5)"
+                  }}
                 >
                   {letter === " " ? "\u00A0" : letter}
                 </motion.span>
