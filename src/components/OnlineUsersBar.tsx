@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   Tooltip,
@@ -31,12 +31,7 @@ const OnlineUsersBar: React.FC<OnlineUsersBarProps> = ({ maxVisible = 8 }) => {
 
   return (
     <TooltipProvider delayDuration={200}>
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        className="flex items-center justify-center gap-3"
-      >
+      <div className="flex items-center justify-center gap-3">
         {/* Online indicator */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Users className="w-4 h-4" />
@@ -44,64 +39,62 @@ const OnlineUsersBar: React.FC<OnlineUsersBarProps> = ({ maxVisible = 8 }) => {
         </div>
 
         {/* Avatars */}
-        <LayoutGroup>
-          <div className="flex -space-x-2">
-            <AnimatePresence mode="sync">
-              {visibleUsers.map((user) => {
-                const isCurrentUser = user.user_id === currentUserId;
-                
-                return (
-                  <Tooltip key={user.user_id}>
-                    <TooltipTrigger asChild>
-                      <motion.div
-                        layout
-                        layoutId={user.user_id}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.8, opacity: 0 }}
-                        transition={{ 
-                          layout: { duration: 0.2, ease: "easeOut" },
-                          opacity: { duration: 0.15 },
-                          scale: { duration: 0.15 }
-                        }}
-                        className="relative"
-                      >
-                        <Avatar
-                          className={`w-8 h-8 border-2 cursor-pointer transition-all duration-200 hover:scale-110 hover:z-50 ${
-                            isCurrentUser
-                              ? 'border-primary ring-2 ring-primary/30'
-                              : 'border-green-500/70'
-                          }`}
-                        >
-                          <AvatarImage
-                            src={user.avatar_url || undefined}
-                            alt={user.username || 'User'}
-                          />
-                          <AvatarFallback className="bg-muted text-xs font-medium">
-                            {getInitials(user.username)}
-                          </AvatarFallback>
-                        </Avatar>
-                        {/* Online dot */}
-                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
-                      </motion.div>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="bottom"
-                      className="bg-popover/95 backdrop-blur-sm border-border"
+        <div className="flex -space-x-2">
+          <AnimatePresence mode="popLayout">
+            {visibleUsers.map((user) => {
+              const isCurrentUser = user.user_id === currentUserId;
+              
+              return (
+                <Tooltip key={user.user_id}>
+                  <TooltipTrigger asChild>
+                    <motion.div
+                      layout
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      transition={{ 
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 30,
+                        mass: 1
+                      }}
+                      className="relative"
                     >
-                      <p className="font-medium">
-                        {user.username || 'Anonim'}
-                        {isCurrentUser && (
-                          <span className="text-muted-foreground ml-1">(Sen)</span>
-                        )}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </AnimatePresence>
-          </div>
-        </LayoutGroup>
+                      <Avatar
+                        className={`w-8 h-8 border-2 cursor-pointer transition-transform duration-200 hover:scale-110 hover:z-50 ${
+                          isCurrentUser
+                            ? 'border-primary ring-2 ring-primary/30'
+                            : 'border-green-500/70'
+                        }`}
+                      >
+                        <AvatarImage
+                          src={user.avatar_url || undefined}
+                          alt={user.username || 'User'}
+                        />
+                        <AvatarFallback className="bg-muted text-xs font-medium">
+                          {getInitials(user.username)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {/* Online dot */}
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-background rounded-full" />
+                    </motion.div>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="bottom"
+                    className="bg-popover/95 backdrop-blur-sm border-border"
+                  >
+                    <p className="font-medium">
+                      {user.username || 'Anonim'}
+                      {isCurrentUser && (
+                        <span className="text-muted-foreground ml-1">(Sen)</span>
+                      )}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </AnimatePresence>
+        </div>
 
         {/* Overflow badge */}
         {overflowCount > 0 && (
@@ -125,7 +118,7 @@ const OnlineUsersBar: React.FC<OnlineUsersBarProps> = ({ maxVisible = 8 }) => {
         <span className="text-sm text-muted-foreground">
           {onlineUsers.length} kişi
         </span>
-      </motion.div>
+      </div>
     </TooltipProvider>
   );
 };

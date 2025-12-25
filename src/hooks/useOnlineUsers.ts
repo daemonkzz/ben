@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -13,11 +13,16 @@ export const useOnlineUsers = (channelName: string = 'online-hikaye-users') => {
   const { user, profile } = useAuth();
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  
+  // Grace period ref to prevent instant empty state
+  const graceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastStableUsersRef = useRef<OnlineUser[]>([]);
 
   useEffect(() => {
     if (!user) {
       setOnlineUsers([]);
       setIsConnected(false);
+      lastStableUsersRef.current = [];
       return;
     }
 
@@ -28,6 +33,34 @@ export const useOnlineUsers = (channelName: string = 'online-hikaye-users') => {
         },
       },
     });
+
+    const updateUsers = (users: OnlineUser[]) => {
+      // Sort deterministically by user_id to prevent layout jumps
+      const sortedUsers = [...users].sort((a, b) => a.user_id.localeCompare(b.user_id));
+      
+      // Clear any pending grace timeout
+      if (graceTimeoutRef.current) {
+        clearTimeout(graceTimeoutRef.current);
+        graceTimeoutRef.current = null;
+      }
+      
+      if (sortedUsers.length === 0 && lastStableUsersRef.current.length > 0) {
+        // Going from users to empty - use grace period
+        graceTimeoutRef.current = setTimeout(() => {
+          setOnlineUsers([]);
+          lastStableUsersRef.current = [];
+        }, 300);
+      } else {
+        // Normal update - check if IDs actually changed
+        const prevIds = lastStableUsersRef.current.map(u => u.user_id).join(',');
+        const newIds = sortedUsers.map(u => u.user_id).join(',');
+        
+        if (prevIds !== newIds) {
+          setOnlineUsers(sortedUsers);
+          lastStableUsersRef.current = sortedUsers;
+        }
+      }
+    };
 
     channel
       .on('presence', { event: 'sync' }, () => {
@@ -41,12 +74,7 @@ export const useOnlineUsers = (channelName: string = 'online-hikaye-users') => {
           }
         });
 
-        // Sadece user_id'ler değiştiyse state'i güncelle (flickering önleme)
-        setOnlineUsers(prev => {
-          const prevIds = prev.map(u => u.user_id).sort().join(',');
-          const newIds = users.map(u => u.user_id).sort().join(',');
-          return prevIds === newIds ? prev : users;
-        });
+        updateUsers(users);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         console.log('User joined:', key, newPresences);
@@ -67,6 +95,9 @@ export const useOnlineUsers = (channelName: string = 'online-hikaye-users') => {
       });
 
     return () => {
+      if (graceTimeoutRef.current) {
+        clearTimeout(graceTimeoutRef.current);
+      }
       channel.unsubscribe();
       setIsConnected(false);
     };

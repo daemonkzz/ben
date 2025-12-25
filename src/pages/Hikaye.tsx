@@ -719,20 +719,8 @@ const Hikaye = () => {
             </AnimatePresence>
           </motion.div>
 
-          {/* Online Users Bar - only on Hikaye Tablosu tab when logged in */}
-          <AnimatePresence>
-            {user && activeTab === "hikaye-tablosu" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="mt-4"
-              >
-                <OnlineUsersBar maxVisible={10} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Placeholder for layout stability - Online bar moved to map overlay */}
+          <div className="h-4" style={{ overflowAnchor: 'none' }} />
 
           <div className="mb-14" />
 
@@ -759,6 +747,24 @@ const Hikaye = () => {
                   onTouchMove={handleTouchMove}
                   onTouchEnd={handleTouchEnd}
                 >
+                  {/* Online Users Bar - Absolute overlay, no layout shift */}
+                  <AnimatePresence>
+                    {user && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute top-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
+                        style={{ overflowAnchor: 'none' }}
+                      >
+                        <div className="pointer-events-auto bg-background/70 backdrop-blur-md border border-border/40 rounded-full px-4 py-2 shadow-lg">
+                          <OnlineUsersBar maxVisible={10} />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   {/* Map image with pan/zoom */}
                   <div
                     className="absolute inset-0 flex items-center justify-center will-change-transform"
