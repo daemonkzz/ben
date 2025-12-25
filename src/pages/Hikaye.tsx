@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useWhiteboardViewer } from "@/hooks/useWhiteboardViewer";
 import { useAuth } from "@/contexts/AuthContext";
 import OnlineUsersBar from "@/components/OnlineUsersBar";
+import CursorOverlay from "@/components/CursorOverlay";
+import { useCursorSync } from "@/hooks/useCursorSync";
 
 const storyContent = [
   {
@@ -69,6 +71,16 @@ const Hikaye = () => {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+
+  // Cursor sync hook - only active when on hikaye-tablosu tab
+  const {
+    cursors,
+    handleMouseMove: handleCursorMove,
+    handleTouchMove: handleCursorTouchMove,
+    handleMouseLeave: handleCursorLeave,
+  } = useCursorSync({
+    isActive: activeTab === "hikaye-tablosu" && !!user,
+  });
   
   const scrollLockRef = useRef<null | {
     scrollY: number;
@@ -458,13 +470,25 @@ const Hikaye = () => {
               ref={fullscreenContainerRef}
               className="absolute inset-0 overflow-hidden overscroll-none touch-none cursor-grab active:cursor-grabbing"
               onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
+              onMouseMove={(e) => {
+                handleMouseMove(e);
+                handleCursorMove(e, fullscreenContainerRef);
+              }}
               onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
+              onMouseLeave={(e) => {
+                handleMouseUp();
+                handleCursorLeave();
+              }}
               onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
+              onTouchMove={(e) => {
+                handleTouchMove(e);
+                handleCursorTouchMove(e, fullscreenContainerRef);
+              }}
               onTouchEnd={handleTouchEnd}
             >
+              {/* Cursor Overlay */}
+              <CursorOverlay cursors={cursors} />
+
               <div
                 className="absolute inset-0 flex items-center justify-center will-change-transform"
                 style={{
@@ -778,13 +802,24 @@ const Hikaye = () => {
                   ref={mapContainerRef}
                   className="w-full h-[calc(100vh-320px)] min-h-[500px] relative overflow-hidden cursor-grab active:cursor-grabbing"
                   onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
+                  onMouseMove={(e) => {
+                    handleMouseMove(e);
+                    handleCursorMove(e, mapContainerRef);
+                  }}
                   onMouseUp={handleMouseUp}
-                  onMouseLeave={handleMouseUp}
+                  onMouseLeave={(e) => {
+                    handleMouseUp();
+                    handleCursorLeave();
+                  }}
                   onTouchStart={handleTouchStart}
-                  onTouchMove={handleTouchMove}
+                  onTouchMove={(e) => {
+                    handleTouchMove(e);
+                    handleCursorTouchMove(e, mapContainerRef);
+                  }}
                   onTouchEnd={handleTouchEnd}
                 >
+                  {/* Cursor Overlay */}
+                  <CursorOverlay cursors={cursors} />
                   {/* Online Users Bar - Absolute overlay, no layout shift */}
                   <AnimatePresence>
                     {user && (
