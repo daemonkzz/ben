@@ -45,6 +45,9 @@ export const useCursorSync = ({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const myColor = user ? generateUserColor(user.id) : '#fff';
 
+  // Debug log on hook initialization
+  console.log('[CursorSync] Hook init:', { userId: user?.id, isActive, channelName });
+
   // Cleanup stale cursors (inactive for more than 3 seconds)
   useEffect(() => {
     if (!isActive) return;
@@ -89,6 +92,8 @@ export const useCursorSync = ({
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
+        console.log('[CursorSync] Presence sync:', { state, userCount: Object.keys(state).length });
+        
         const newCursors = new Map<string, CursorPosition>();
 
         Object.keys(state).forEach((key) => {
@@ -97,6 +102,7 @@ export const useCursorSync = ({
           const presences = state[key] as unknown as any[];
           if (presences && presences.length > 0) {
             const presence = presences[0];
+            console.log('[CursorSync] Processing presence:', { key, presence });
             if (presence.cursor && typeof presence.cursor.x === 'number') {
               newCursors.set(key, {
                 x: presence.cursor.x,
@@ -111,11 +117,14 @@ export const useCursorSync = ({
           }
         });
 
+        console.log('[CursorSync] Cursors to show:', newCursors.size);
         setCursors(newCursors);
       })
       .subscribe(async (status) => {
+        console.log('[CursorSync] Channel status:', status);
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
+          console.log('[CursorSync] ✅ Connected to channel:', channelName);
         }
       });
 
@@ -129,8 +138,12 @@ export const useCursorSync = ({
   // Throttled cursor update function
   const updateCursor = useCallback(
     throttle(async (x: number, y: number) => {
-      if (!channelRef.current || !user || !isActive) return;
+      if (!channelRef.current || !user || !isActive) {
+        console.log('[CursorSync] Skip update:', { hasChannel: !!channelRef.current, hasUser: !!user, isActive });
+        return;
+      }
 
+      console.log('[CursorSync] Sending cursor:', { x: x.toFixed(1), y: y.toFixed(1) });
       await channelRef.current.track({
         user_id: user.id,
         username: profile?.username || null,

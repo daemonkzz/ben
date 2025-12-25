@@ -75,6 +75,7 @@ const Hikaye = () => {
   // Cursor sync hook - only active when on hikaye-tablosu tab
   const {
     cursors,
+    isConnected: isCursorSyncConnected,
     handleMouseMove: handleCursorMove,
     handleTouchMove: handleCursorTouchMove,
     handleMouseLeave: handleCursorLeave,
@@ -940,8 +941,14 @@ const Hikaye = () => {
                     </Button>
                   </div>
 
-                  {/* Usage hint - bottom left */}
-                  <div className="absolute bottom-4 left-4 z-10">
+                  {/* Cursor sync status - bottom left */}
+                  <div className="absolute bottom-4 left-4 z-10 flex flex-col gap-1.5">
+                    {user && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70 bg-background/40 backdrop-blur-sm rounded-full px-2 py-1">
+                        <div className={`w-1.5 h-1.5 rounded-full ${isCursorSyncConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span>İmleç: {cursors.length} kullanıcı</span>
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground/50">
                       Sürükle: gezin • Scroll: yakınlaştır
                     </p>
