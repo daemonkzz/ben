@@ -241,10 +241,8 @@ const WhatIsSection = () => {
               {/* Top Card - aligned right */}
               <motion.div 
                 className="relative bg-[#222222] rounded-2xl p-6 border border-white/[0.06] cursor-pointer overflow-hidden ml-auto w-[320px] group"
-                variants={cardHoverVariants}
-                initial="rest"
-                whileHover="hover"
-                animate="rest"
+                variants={itemVariants}
+                whileHover={{ scale: 1.03, y: -8, transition: { duration: 0.3 } }}
               >
                 {/* Hover glow */}
                 <motion.div 
@@ -270,10 +268,8 @@ const WhatIsSection = () => {
                 {/* Card with diagonal gradient */}
                 <motion.div 
                   className="relative bg-[#222222] rounded-2xl p-5 border border-white/[0.06] cursor-pointer overflow-hidden group"
-                  variants={cardHoverVariants}
-                  initial="rest"
-                  whileHover="hover"
-                  animate="rest"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.03, y: -8, transition: { duration: 0.3 } }}
                 >
                   {/* Diagonal yellow gradient overlay */}
                   <motion.div 
@@ -309,10 +305,8 @@ const WhatIsSection = () => {
                 {/* Dark card */}
                 <motion.div 
                   className="bg-[#222222] rounded-2xl p-5 border border-white/[0.06] cursor-pointer relative overflow-hidden group"
-                  variants={cardHoverVariants}
-                  initial="rest"
-                  whileHover="hover"
-                  animate="rest"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.03, y: -8, transition: { duration: 0.3 } }}
                 >
                   {/* Hover glow */}
                   <motion.div 
@@ -336,10 +330,8 @@ const WhatIsSection = () => {
               {/* Full-width bottom card - same height as left image */}
               <motion.div 
                 className="relative bg-[#222222] rounded-2xl p-6 border border-white/[0.06] cursor-pointer overflow-hidden group flex-1 min-h-[180px] flex flex-col justify-center"
-                variants={cardHoverVariants}
-                initial="rest"
-                whileHover="hover"
-                animate="rest"
+                variants={itemVariants}
+                whileHover={{ scale: 1.03, y: -8, transition: { duration: 0.3 } }}
               >
                 {/* Yellow diagonal gradient overlay */}
                 <motion.div 
