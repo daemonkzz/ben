@@ -30,12 +30,12 @@ const WhatIsSection = () => {
     },
   };
 
-  const cardHoverVariants = {
+  const cardHoverVariants: Variants = {
     rest: { scale: 1, y: 0 },
     hover: { 
       scale: 1.03, 
       y: -8,
-      transition: { duration: 0.3, ease: "easeOut" },
+      transition: { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number] },
     },
   };
 
@@ -241,7 +241,7 @@ const WhatIsSection = () => {
               {/* Top Card - aligned right */}
               <motion.div 
                 className="relative bg-[#222222] rounded-2xl p-6 border border-white/[0.06] cursor-pointer overflow-hidden ml-auto w-[320px] group"
-                variants={itemVariants}
+                variants={cardHoverVariants}
                 initial="rest"
                 whileHover="hover"
                 animate="rest"
@@ -270,7 +270,7 @@ const WhatIsSection = () => {
                 {/* Card with diagonal gradient */}
                 <motion.div 
                   className="relative bg-[#222222] rounded-2xl p-5 border border-white/[0.06] cursor-pointer overflow-hidden group"
-                  variants={itemVariants}
+                  variants={cardHoverVariants}
                   initial="rest"
                   whileHover="hover"
                   animate="rest"
@@ -309,7 +309,7 @@ const WhatIsSection = () => {
                 {/* Dark card */}
                 <motion.div 
                   className="bg-[#222222] rounded-2xl p-5 border border-white/[0.06] cursor-pointer relative overflow-hidden group"
-                  variants={itemVariants}
+                  variants={cardHoverVariants}
                   initial="rest"
                   whileHover="hover"
                   animate="rest"
@@ -336,7 +336,7 @@ const WhatIsSection = () => {
               {/* Full-width bottom card - same height as left image */}
               <motion.div 
                 className="relative bg-[#222222] rounded-2xl p-6 border border-white/[0.06] cursor-pointer overflow-hidden group flex-1 min-h-[180px] flex flex-col justify-center"
-                variants={itemVariants}
+                variants={cardHoverVariants}
                 initial="rest"
                 whileHover="hover"
                 animate="rest"
