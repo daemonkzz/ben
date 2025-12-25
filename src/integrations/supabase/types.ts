@@ -450,7 +450,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_2fa_status: {
+        Row: {
+          created_at: string | null
+          failed_attempts: number | null
+          id: string | null
+          is_blocked: boolean | null
+          is_provisioned: boolean | null
+          last_failed_at: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          failed_attempts?: number | null
+          id?: string | null
+          is_blocked?: boolean | null
+          is_provisioned?: boolean | null
+          last_failed_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          failed_attempts?: number | null
+          id?: string | null
+          is_blocked?: boolean | null
+          is_provisioned?: boolean | null
+          last_failed_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -459,6 +491,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      record_totp_result: {
+        Args: { p_success: boolean; p_user_id: string }
+        Returns: Json
+      }
+      verify_totp_code: {
+        Args: { p_code: string; p_user_id: string }
+        Returns: Json
       }
     }
     Enums: {
