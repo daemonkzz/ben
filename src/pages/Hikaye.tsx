@@ -72,6 +72,9 @@ const Hikaye = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fullscreenContainerRef = useRef<HTMLDivElement>(null);
 
+  // Map state for cursor sync
+  const mapStateForCursor = { scale, position };
+
   // Cursor sync hook - only active when on hikaye-tablosu tab
   const {
     cursors,
@@ -81,6 +84,7 @@ const Hikaye = () => {
     handleMouseLeave: handleCursorLeave,
   } = useCursorSync({
     isActive: activeTab === "hikaye-tablosu" && !!user,
+    mapState: mapStateForCursor,
   });
   
   const scrollLockRef = useRef<null | {
@@ -488,7 +492,7 @@ const Hikaye = () => {
               onTouchEnd={handleTouchEnd}
             >
               {/* Cursor Overlay */}
-              <CursorOverlay cursors={cursors} />
+              <CursorOverlay cursors={cursors} mapState={mapStateForCursor} />
 
               <div
                 className="absolute inset-0 flex items-center justify-center will-change-transform"
@@ -820,7 +824,7 @@ const Hikaye = () => {
                   onTouchEnd={handleTouchEnd}
                 >
                   {/* Cursor Overlay */}
-                  <CursorOverlay cursors={cursors} />
+                  <CursorOverlay cursors={cursors} mapState={mapStateForCursor} />
                   {/* Online Users Bar - Absolute overlay, no layout shift */}
                   <AnimatePresence>
                     {user && (

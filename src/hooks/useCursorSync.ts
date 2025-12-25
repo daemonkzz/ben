@@ -3,9 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { throttle } from 'lodash';
 
+export interface MapState {
+  scale: number;
+  position: { x: number; y: number };
+}
+
 export interface CursorPosition {
-  x: number; // 0-100 (percentage)
-  y: number; // 0-100 (percentage)
+  x: number; // viewport percentage (0-100)
+  y: number; // viewport percentage (0-100)
+  worldX: number; // world/map coordinate
+  worldY: number; // world/map coordinate
   user_id: string;
   username: string | null;
   avatar_url: string | null;
@@ -37,20 +44,25 @@ const generateUserColor = (userId: string): string => {
 interface UseCursorSyncOptions {
   channelName?: string;
   isActive?: boolean;
+  mapState?: MapState;
 }
 
 export const useCursorSync = ({
   channelName = 'cursor-hikaye-tablosu',
-  isActive = true
+  isActive = true,
+  mapState = { scale: 1, position: { x: 0, y: 0 } }
 }: UseCursorSyncOptions = {}) => {
   const { user, profile } = useAuth();
   const [cursors, setCursors] = useState<Map<string, CursorPosition>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const mapStateRef = useRef(mapState);
   const myColor = user ? generateUserColor(user.id) : '#fff';
 
-  // Debug log on hook initialization
-  console.log('[CursorSync] Hook init:', { userId: user?.id, isActive, channelName });
+  // Keep mapState ref updated
+  useEffect(() => {
+    mapStateRef.current = mapState;
+  }, [mapState]);
 
   // Cleanup stale cursors (inactive for more than 3 seconds)
   useEffect(() => {
@@ -96,9 +108,8 @@ export const useCursorSync = ({
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
-        console.log('[CursorSync] Presence sync:', { state, userCount: Object.keys(state).length });
-        
         const newCursors = new Map<string, CursorPosition>();
+        const currentMapState = mapStateRef.current;
 
         Object.keys(state).forEach((key) => {
           if (key === user.id) return; // Skip own cursor
@@ -106,11 +117,20 @@ export const useCursorSync = ({
           const presences = state[key] as unknown as any[];
           if (presences && presences.length > 0) {
             const presence = presences[0];
-            console.log('[CursorSync] Processing presence:', { key, presence });
-            if (presence.cursor && typeof presence.cursor.x === 'number') {
+            if (presence.cursor && typeof presence.cursor.worldX === 'number') {
+              // Convert world coordinates to viewport coordinates based on OUR map state
+              const { scale, position } = currentMapState;
+              
+              // World to viewport: viewport = (world * scale) + offset
+              // offset is position as percentage of container
+              const viewportX = (presence.cursor.worldX * scale) + (position.x / 10); // position.x is in px, normalize
+              const viewportY = (presence.cursor.worldY * scale) + (position.y / 10);
+              
               newCursors.set(key, {
-                x: presence.cursor.x,
-                y: presence.cursor.y,
+                x: viewportX,
+                y: viewportY,
+                worldX: presence.cursor.worldX,
+                worldY: presence.cursor.worldY,
                 user_id: presence.user_id,
                 username: presence.username,
                 avatar_url: presence.avatar_url,
@@ -121,14 +141,11 @@ export const useCursorSync = ({
           }
         });
 
-        console.log('[CursorSync] Cursors to show:', newCursors.size);
         setCursors(newCursors);
       })
       .subscribe(async (status) => {
-        console.log('[CursorSync] Channel status:', status);
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
-          console.log('[CursorSync] ✅ Connected to channel:', channelName);
         }
       });
 
@@ -139,23 +156,30 @@ export const useCursorSync = ({
     };
   }, [user, channelName, isActive]);
 
-  // Throttled cursor update function
+  // Throttled cursor update function - sends WORLD coordinates
   const updateCursor = useCallback(
-    throttle(async (x: number, y: number) => {
-      if (!channelRef.current || !user || !isActive) {
-        console.log('[CursorSync] Skip update:', { hasChannel: !!channelRef.current, hasUser: !!user, isActive });
-        return;
-      }
+    throttle(async (viewportX: number, viewportY: number, containerWidth: number, containerHeight: number) => {
+      if (!channelRef.current || !user || !isActive) return;
 
-      console.log('[CursorSync] Sending cursor:', { x: x.toFixed(1), y: y.toFixed(1) });
+      const { scale, position } = mapStateRef.current;
+      
+      // Convert viewport coordinates to world coordinates
+      // Viewport to world: world = (viewport - offset) / scale
+      // position is in pixels, convert to percentage of container
+      const offsetXPercent = (position.x / containerWidth) * 100;
+      const offsetYPercent = (position.y / containerHeight) * 100;
+      
+      const worldX = (viewportX - offsetXPercent) / scale;
+      const worldY = (viewportY - offsetYPercent) / scale;
+
       await channelRef.current.track({
         user_id: user.id,
         username: profile?.username || null,
         avatar_url: profile?.avatar_url || null,
-        cursor: { x, y },
+        cursor: { worldX, worldY },
         online_at: new Date().toISOString(),
       });
-    }, 50), // 50ms throttle = max 20 updates per second
+    }, 50),
     [user, profile, isActive]
   );
 
@@ -172,7 +196,7 @@ export const useCursorSync = ({
 
     // Only send if within bounds
     if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
-      updateCursor(x, y);
+      updateCursor(x, y, rect.width, rect.height);
     }
   }, [updateCursor, isActive]);
 
@@ -189,7 +213,7 @@ export const useCursorSync = ({
     const y = ((touch.clientY - rect.top) / rect.height) * 100;
 
     if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
-      updateCursor(x, y);
+      updateCursor(x, y, rect.width, rect.height);
     }
   }, [updateCursor, isActive]);
 
@@ -201,7 +225,7 @@ export const useCursorSync = ({
       user_id: user.id,
       username: profile?.username || null,
       avatar_url: profile?.avatar_url || null,
-      cursor: null, // Clear cursor position
+      cursor: null,
       online_at: new Date().toISOString(),
     });
   }, [user, profile, isActive]);

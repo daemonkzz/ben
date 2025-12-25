@@ -1,9 +1,10 @@
 import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CursorPosition } from '@/hooks/useCursorSync';
+import { CursorPosition, MapState } from '@/hooks/useCursorSync';
 
 interface CursorOverlayProps {
   cursors: CursorPosition[];
+  mapState?: MapState;
 }
 
 // Cursor SVG component with gradient fill and colored border
@@ -36,48 +37,68 @@ const CursorIcon = ({ borderColor, odometer }: { borderColor: string; odometer: 
   );
 };
 
-const CursorOverlay = memo(({ cursors }: CursorOverlayProps) => {
+const CursorOverlay = memo(({ cursors, mapState }: CursorOverlayProps) => {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
       <AnimatePresence>
-        {cursors.map((cursor, index) => (
-          <motion.div
-            key={cursor.user_id}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1,
-              left: `${cursor.x}%`,
-              top: `${cursor.y}%`,
-            }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{
-              opacity: { duration: 0.2 },
-              scale: { duration: 0.2 },
-              left: { duration: 0.1, ease: 'linear' },
-              top: { duration: 0.1, ease: 'linear' },
-            }}
-            className="absolute"
-            style={{
-              transform: 'translate(-3px, -3px)',
-            }}
-          >
-            {/* Cursor icon */}
-            <CursorIcon borderColor={cursor.color} odometer={index} />
-            
-            {/* Minimalist username label */}
-            <div 
-              className="absolute left-4 top-4 whitespace-nowrap px-1.5 py-0.5 
-                         rounded text-[10px] font-medium text-white/80 
-                         bg-black/30 backdrop-blur-[2px]"
-              style={{ 
-                borderLeft: `2px solid ${cursor.color}`,
+        {cursors.map((cursor, index) => {
+          // Use world coordinates transformed by OUR map state for display
+          let displayX = cursor.x;
+          let displayY = cursor.y;
+          
+          if (mapState) {
+            const { scale, position } = mapState;
+            // World to viewport: viewport = (world * scale) + offset
+            // Offset needs to be as percentage - position is in pixels
+            // We estimate container size as 100% = container width
+            displayX = (cursor.worldX * scale) + (position.x / 10);
+            displayY = (cursor.worldY * scale) + (position.y / 10);
+          }
+          
+          // Hide cursors outside viewport with some margin
+          const isVisible = displayX >= -20 && displayX <= 120 && displayY >= -20 && displayY <= 120;
+          
+          if (!isVisible) return null;
+          
+          return (
+            <motion.div
+              key={cursor.user_id}
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1,
+                left: `${displayX}%`,
+                top: `${displayY}%`,
+              }}
+              exit={{ opacity: 0, scale: 0.5 }}
+              transition={{
+                opacity: { duration: 0.2 },
+                scale: { duration: 0.2 },
+                left: { duration: 0.1, ease: 'linear' },
+                top: { duration: 0.1, ease: 'linear' },
+              }}
+              className="absolute"
+              style={{
+                transform: 'translate(-3px, -3px)',
               }}
             >
-              {(cursor.username || 'Anonim').slice(0, 10)}
-            </div>
-          </motion.div>
-        ))}
+              {/* Cursor icon */}
+              <CursorIcon borderColor={cursor.color} odometer={index} />
+              
+              {/* Minimalist username label */}
+              <div 
+                className="absolute left-4 top-4 whitespace-nowrap px-1.5 py-0.5 
+                           rounded text-[10px] font-medium text-white/80 
+                           bg-black/30 backdrop-blur-[2px]"
+                style={{ 
+                  borderLeft: `2px solid ${cursor.color}`,
+                }}
+              >
+                {(cursor.username || 'Anonim').slice(0, 10)}
+              </div>
+            </motion.div>
+          );
+        })}
       </AnimatePresence>
     </div>
   );
