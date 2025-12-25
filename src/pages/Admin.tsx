@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   Filter,
   Image as ImageIcon,
-  Map
+  Map,
+  LayoutDashboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,8 +53,9 @@ import {
 import { SessionTimeoutIndicator } from '@/components/admin/SessionTimeoutIndicator';
 import type { FormQuestion, FormSettings, FormType } from '@/types/formBuilder';
 import type { UpdateData } from '@/types/update';
+import { DashboardStats } from '@/components/admin/DashboardStats';
 
-type TabType = 'basvurular' | 'formlar' | 'guncellemeler' | 'bildirimler' | 'kurallar' | 'galeri' | 'canliharita' | 'kullanicilar' | 'yetkilendirme';
+type TabType = 'dashboard' | 'basvurular' | 'formlar' | 'guncellemeler' | 'bildirimler' | 'kurallar' | 'galeri' | 'canliharita' | 'kullanicilar' | 'yetkilendirme';
 type ApplicationFilterType = 'all' | 'whitelist' | 'other';
 type FormFilterType = 'all' | 'whitelist' | 'other';
 type UpdateFilterType = 'all' | 'update' | 'news';
@@ -85,7 +87,7 @@ const Admin = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = (searchParams.get('tab') as TabType) || 'basvurular';
+  const activeTab = (searchParams.get('tab') as TabType) || 'dashboard';
   
   const setActiveTab = (tab: TabType) => {
     setSearchParams({ tab });
@@ -494,6 +496,7 @@ const Admin = () => {
   }
 
   const sidebarItems = [
+    { id: 'dashboard' as TabType, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'basvurular' as TabType, label: 'Başvurular', icon: FileText },
     { id: 'formlar' as TabType, label: 'Form Şablonları', icon: Settings },
     { id: 'guncellemeler' as TabType, label: 'Güncellemeler', icon: Bell },
@@ -555,6 +558,9 @@ const Admin = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-8">
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && <DashboardStats />}
+
         {/* Başvurular Tab */}
         {activeTab === 'basvurular' && (
           <div>
