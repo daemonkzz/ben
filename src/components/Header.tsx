@@ -304,9 +304,38 @@ const Header = () => {
 
           {/* Mobile Header - Logo Left, Menu Right */}
           <div className="flex lg:hidden items-center justify-between w-full">
-            <Link to="/" className="flex items-center">
-              <AnimatedLogo size="sm" />
-            </Link>
+            {/* Mobile Logo with Notification Badge */}
+            {user && unreadCount > 0 ? (
+              <motion.button
+                onClick={() => setIsNotificationsOpen(true)}
+                className="relative flex items-center justify-center w-10 h-10"
+                whileTap={{ scale: 0.9 }}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <motion.div
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                  }}
+                  transition={{ 
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="relative"
+                >
+                  <Bell className="w-6 h-6 text-primary" />
+                  <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                </motion.div>
+              </motion.button>
+            ) : (
+              <Link to="/" className="flex items-center">
+                <AnimatedLogo size="sm" />
+              </Link>
+            )}
             <motion.button
               className="p-2 text-foreground"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
