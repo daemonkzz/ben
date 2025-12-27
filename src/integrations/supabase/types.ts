@@ -679,6 +679,48 @@ export type Database = {
           },
         ]
       }
+      audit_logs_safe: {
+        Row: {
+          action: string | null
+          changed_fields: string[] | null
+          created_at: string | null
+          id: string | null
+          ip_address_masked: string | null
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          table_name: string | null
+          user_agent_short: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          changed_fields?: string[] | null
+          created_at?: string | null
+          id?: string | null
+          ip_address_masked?: never
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_agent_short?: never
+          user_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          changed_fields?: string[] | null
+          created_at?: string | null
+          id?: string | null
+          ip_address_masked?: never
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string | null
+          user_agent_short?: never
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       form_templates_public: {
         Row: {
           cover_image_url: string | null
