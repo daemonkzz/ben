@@ -223,6 +223,37 @@ const AdminBasvuruDetay = () => {
     }
   }, [isAuthorized, id, navigate]);
 
+  // Bildirim gönderme yardımcı fonksiyonu
+  const sendNotification = async (userId: string, title: string, content: string) => {
+    try {
+      const { data: notifData, error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          title,
+          content,
+          is_global: false,
+          created_by: user?.id
+        })
+        .select()
+        .single();
+
+      if (notifError) {
+        console.error('Notification create error:', notifError);
+        return;
+      }
+
+      if (notifData) {
+        await supabase.from('notification_recipients').insert({
+          notification_id: notifData.id,
+          user_id: userId,
+          is_read: false
+        });
+      }
+    } catch (error) {
+      console.error('Send notification error:', error);
+    }
+  };
+
   const updateStatus = async (status: 'approved' | 'rejected') => {
     if (!application) return;
 
@@ -242,6 +273,22 @@ const AdminBasvuruDetay = () => {
         console.error('Update error:', error);
         toast.error('Durum güncellenirken hata oluştu');
         return;
+      }
+
+      // Bildirim gönder
+      const appNumber = (application as any).application_number || `#${application.id}`;
+      if (status === 'approved') {
+        await sendNotification(
+          application.user_id,
+          'Başvuru Onaylandı!',
+          `Tebrikler! Başvurunuz (${appNumber}) onaylandı. Sunucuya hoş geldiniz!`
+        );
+      } else {
+        await sendNotification(
+          application.user_id,
+          'Başvuru Sonucu',
+          `Başvurunuz (${appNumber}) değerlendirildi ve maalesef kabul edilemedi. Detaylar için başvuru merkezini ziyaret edebilirsiniz.`
+        );
       }
 
       toast.success(status === 'approved' ? 'Başvuru onaylandı' : 'Başvuru reddedildi');
@@ -277,6 +324,14 @@ const AdminBasvuruDetay = () => {
         toast.error('Revizyon isteği gönderilirken hata oluştu');
         return;
       }
+
+      // Revizyon bildirimi gönder
+      const appNumber = (application as any).application_number || `#${application.id}`;
+      await sendNotification(
+        application.user_id,
+        'Başvurunuzda Düzenleme İstendi',
+        `Başvurunuz (${appNumber}) için ${selectedForRevision.length} soruda düzenleme yapmanız istendi. Lütfen başvuru merkezini ziyaret edin.`
+      );
 
       toast.success('Revizyon isteği gönderildi');
       navigate('/admin');

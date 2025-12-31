@@ -26,12 +26,27 @@ export const useNotifications = () => {
 
     setIsLoading(true);
     try {
-      // Fetch global notifications
-      const { data: globalNotifications, error: globalError } = await supabase
+      // Kullanıcının kayıt tarihini al
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('created_at')
+        .eq('id', user.id)
+        .single();
+
+      const userCreatedAt = profile?.created_at;
+
+      // Fetch global notifications (sadece kullanıcı kayıt olduktan sonrakiler)
+      let globalQuery = supabase
         .from('notifications')
         .select('*')
         .eq('is_global', true)
         .order('created_at', { ascending: false });
+
+      if (userCreatedAt) {
+        globalQuery = globalQuery.gte('created_at', userCreatedAt);
+      }
+
+      const { data: globalNotifications, error: globalError } = await globalQuery;
 
       if (globalError) {
         console.error('Error fetching global notifications:', globalError);
