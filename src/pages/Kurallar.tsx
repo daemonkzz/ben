@@ -28,9 +28,15 @@ const Kurallar = () => {
         .limit(1)
         .maybeSingle();
 
+      // Only use DB rules if they have enough categories (new format has 2 main categories with many subcategories)
       if (!error && data && Array.isArray(data.data) && data.data.length > 0) {
-        setRulesFromDb(data.data as MainCategory[]);
-        setLastUpdated(data.updated_at);
+        const dbRules = data.data as MainCategory[];
+        // Check if DB has updated rules (should have at least 8 subcategories in first category)
+        const hasUpdatedRules = dbRules[0]?.subCategories?.length >= 8;
+        if (hasUpdatedRules) {
+          setRulesFromDb(dbRules);
+          setLastUpdated(data.updated_at);
+        }
       }
     };
     fetchRules();
